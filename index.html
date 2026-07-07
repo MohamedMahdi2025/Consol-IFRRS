@@ -10,7 +10,7 @@
 <style>
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
-  body { font-family: system-ui, -apple-system, sans-serif; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #16232E; }
   #root { min-height: 100vh; }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-thumb { background: #16232E55; border-radius: 5px; }
@@ -21,12 +21,12 @@
 </head>
 <body>
 <div id="root">
-  <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui,sans-serif;color:#5B6B77;">
-    Loading Consolidation Ledger…
+  <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui,sans-serif;color:#A9823C;background:#16232E;">
+    Preparing your ledger…
   </div>
 </div>
 <script type="text/babel" data-presets="react">
-const { useState, useMemo } = React;
+const { useState, useMemo, useEffect } = React;
 
 /* ============================================================
    Minimal inline icon set (replaces lucide-react for a
@@ -2838,12 +2838,432 @@ function Ledger({ label, rows, note, isTable }) {
   );
 }
 
+/* ============================================================
+   GLOBAL KEYFRAMES
+   All transmission/transition effects live here: the one-time
+   opening splash sequence, and the short per-question /
+   per-tab content transitions used throughout the app.
+   ============================================================ */
+function GlobalStyles() {
+  return (
+    <style>{`
+      @keyframes cl-letterReveal {
+        from { opacity: 0; transform: translateY(10px); filter: blur(2px); }
+        to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+      }
+      @keyframes cl-lineSweep {
+        from { transform: scaleX(0); }
+        to   { transform: scaleX(1); }
+      }
+      @keyframes cl-fadeUp {
+        from { opacity: 0; transform: translateY(14px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes cl-stampIn {
+        0%   { opacity: 0; transform: scale(2.6) rotate(-10deg); }
+        55%  { opacity: 1; transform: scale(0.88) rotate(-10deg); }
+        75%  { transform: scale(1.06) rotate(-10deg); }
+        100% { opacity: 1; transform: scale(1) rotate(-10deg); }
+      }
+      @keyframes cl-ringPulse {
+        0%   { box-shadow: 0 0 0 0 rgba(169,130,60,0.55); opacity: 1; }
+        100% { box-shadow: 0 0 0 46px rgba(169,130,60,0); opacity: 0; }
+      }
+      @keyframes cl-shimmer {
+        0%, 100% { opacity: 0.55; }
+        50%      { opacity: 1; }
+      }
+      @keyframes cl-splashOut {
+        from { opacity: 1; }
+        to   { opacity: 0; visibility: hidden; }
+      }
+      @keyframes cl-sidebarPress {
+        0%   { transform: scale(1); }
+        40%  { transform: scale(0.985); }
+        100% { transform: scale(1); }
+      }
+
+      /* ---- FIRE SPLASH: slow letter reveal, flickering flame glow,
+         shimmering flame gradient, rising embers, ambient glow pulse ---- */
+      @keyframes cl-letterRevealSlow {
+        0%   { opacity: 0; transform: translateY(16px) scale(0.9); filter: blur(4px); }
+        60%  { filter: blur(0.5px); }
+        100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      }
+      @keyframes cl-flameFlicker {
+        0%, 100% { text-shadow: 0 0 6px rgba(255,140,50,0.55), 0 0 16px rgba(255,90,30,0.35); }
+        25%      { text-shadow: 0 0 11px rgba(255,185,90,0.8), 0 0 24px rgba(255,90,30,0.5); }
+        50%      { text-shadow: 0 0 4px rgba(255,120,40,0.4), 0 0 10px rgba(220,60,20,0.28); }
+        75%      { text-shadow: 0 0 13px rgba(255,205,110,0.85), 0 0 26px rgba(255,100,30,0.55); }
+      }
+      @keyframes cl-flameShift {
+        0%, 100% { background-position: 0% 10%; }
+        50%      { background-position: 0% 95%; }
+      }
+      @keyframes cl-emberRise {
+        0%   { transform: translateY(0) translateX(0) scale(1);     opacity: 0; }
+        12%  { opacity: 1; }
+        100% { transform: translateY(-160px) translateX(var(--drift, 12px)) scale(0.25); opacity: 0; }
+      }
+      @keyframes cl-fireGlowPulse {
+        0%, 100% { opacity: 0.55; transform: scale(1); }
+        50%      { opacity: 0.95; transform: scale(1.08); }
+      }
+      @keyframes cl-emberRingPulse {
+        0%   { box-shadow: 0 0 0 0 rgba(255,122,60,0.55); opacity: 1; }
+        100% { box-shadow: 0 0 0 50px rgba(255,122,60,0); opacity: 0; }
+      }
+
+      /* ---- 1. QUESTION change: a "ledger page turn" — perspective
+         rotate + slide + fade, distinct from every other transition ---- */
+      @keyframes cl-pageTurnIn {
+        0%   { opacity: 0; transform: perspective(1000px) rotateY(8deg) translateX(28px) scale(0.98); }
+        100% { opacity: 1; transform: perspective(1000px) rotateY(0deg)  translateX(0)     scale(1); }
+      }
+      .cl-question-enter {
+        transform-origin: left center;
+        animation: cl-pageTurnIn 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      /* ---- 2. TAB change: a horizontal swipe, direction-aware
+         (forwards through Question→Solution→Marking→Tricks slides
+         one way, backwards slides the other) ---- */
+      @keyframes cl-tabInFromRight {
+        from { opacity: 0; transform: translateX(26px); }
+        to   { opacity: 1; transform: translateX(0); }
+      }
+      @keyframes cl-tabInFromLeft {
+        from { opacity: 0; transform: translateX(-26px); }
+        to   { opacity: 1; transform: translateX(0); }
+      }
+      .cl-tab-enter-right { animation: cl-tabInFromRight 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+      .cl-tab-enter-left  { animation: cl-tabInFromLeft  0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+
+      /* ---- 3. SIDEBAR list re-filter: a staggered cascade,
+         each row entering slightly after the last ---- */
+      @keyframes cl-rowCascade {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      .cl-row-cascade { animation: cl-rowCascade 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+      /* ---- 4. RIPPLE: a material-style ink ripple applied on
+         mousedown to every clickable control in the app ---- */
+      @keyframes cl-rippleAnim {
+        from { transform: scale(0);   opacity: 0.55; }
+        to   { transform: scale(2.6); opacity: 0; }
+      }
+      .cl-ripple-span {
+        position: absolute;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(169,130,60,0.55) 0%, rgba(169,130,60,0.15) 70%);
+        pointer-events: none;
+        transform: scale(0);
+        animation: cl-rippleAnim 0.65s ease-out forwards;
+        z-index: 5;
+      }
+      .cl-rippleable { position: relative; overflow: hidden; }
+
+      /* ---- 5. Marks/time folio badge: a brief brass glow whenever
+         a new question's marks value mounts ---- */
+      @keyframes cl-folioGlow {
+        0%   { box-shadow: 0 0 0 0 rgba(169,130,60,0.5); }
+        60%  { box-shadow: 0 0 0 8px rgba(169,130,60,0); }
+        100% { box-shadow: 0 0 0 0 rgba(169,130,60,0); }
+      }
+      .cl-folio-glow { animation: cl-folioGlow 0.7s ease-out; }
+
+      /* ---- 6. Difficulty/part filter buttons: gentle press + glow ---- */
+      @keyframes cl-filterPress {
+        0%   { transform: scale(1); }
+        45%  { transform: scale(0.94); }
+        100% { transform: scale(1); }
+      }
+      .cl-filter-btn:active { animation: cl-filterPress 0.22s ease; }
+
+      /* Smooth color/border transitions on every interactive control
+         so hover/active states never feel like a hard cut */
+      button, input {
+        transition: background-color 0.18s ease, border-color 0.18s ease,
+                    color 0.18s ease, transform 0.15s ease, box-shadow 0.18s ease;
+      }
+    `}</style>
+  );
+}
+
+/* ============================================================
+   OPENING SPLASH
+   A ~7.5s ledger-themed title sequence: brass frame draws in,
+   the title reveals letter by letter, a wax-seal style emblem
+   stamps down with a ring pulse, a rule sweeps beneath it, then
+   the whole scene fades to reveal the working app underneath.
+   ============================================================ */
+function SplashScreen({ onFinish }) {
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    const fadeTimer = setTimeout(() => setFading(true), 7200);
+    const doneTimer = setTimeout(() => onFinish(), 8000);
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(doneTimer);
+    };
+  }, [onFinish]);
+
+  const title = "CONSOLIDATION LEDGER";
+  const letters = title.split("");
+  // Slower stagger spread across ~2.4s so the title burns in gradually
+  const letterStart = 0.9;
+  const letterStep = 0.11;
+
+  // Fixed set of ember particles (deterministic so the effect is stable)
+  const embers = [
+    { left: "18%", delay: 0.3, dur: 3.2, drift: 14, size: 5 },
+    { left: "27%", delay: 1.4, dur: 2.8, drift: -10, size: 4 },
+    { left: "35%", delay: 0.8, dur: 3.6, drift: 18, size: 6 },
+    { left: "44%", delay: 2.1, dur: 3.0, drift: -14, size: 4 },
+    { left: "52%", delay: 0.5, dur: 3.4, drift: 8, size: 5 },
+    { left: "60%", delay: 1.7, dur: 2.9, drift: -18, size: 4 },
+    { left: "68%", delay: 1.0, dur: 3.3, drift: 12, size: 6 },
+    { left: "75%", delay: 2.4, dur: 3.1, drift: -8, size: 4 },
+    { left: "83%", delay: 0.6, dur: 3.5, drift: 16, size: 5 },
+    { left: "40%", delay: 3.0, dur: 2.7, drift: -12, size: 4 },
+    { left: "58%", delay: 3.4, dur: 3.2, drift: 10, size: 5 },
+    { left: "22%", delay: 2.8, dur: 3.0, drift: -16, size: 4 },
+  ];
+
+  const fireGradient =
+    "linear-gradient(180deg, #FFF3D0 0%, #FFD37A 16%, #FFB347 36%, #FF7A3C 58%, #E8432B 80%, #B8241A 100%)";
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        overflow: "hidden",
+        background: `radial-gradient(ellipse at center, #24160f 0%, ${INK} 68%)`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        animation: fading ? "cl-splashOut 0.8s ease forwards" : "none",
+      }}
+    >
+      {/* Ambient fire glow, pulsing behind everything */}
+      <div
+        style={{
+          position: "absolute",
+          width: 520,
+          height: 520,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(255,122,60,0.28) 0%, rgba(232,67,43,0.08) 45%, transparent 72%)",
+          filter: "blur(6px)",
+          animation: "cl-fireGlowPulse 3.6s ease-in-out infinite",
+        }}
+      />
+
+      {/* Rising embers */}
+      {embers.map((e, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            bottom: "30%",
+            left: e.left,
+            width: e.size,
+            height: e.size,
+            borderRadius: "50%",
+            background: "radial-gradient(circle, #FFD9A0 0%, #FF7A3C 55%, transparent 75%)",
+            opacity: 0,
+            "--drift": `${e.drift}px`,
+            animation: `cl-emberRise ${e.dur}s ease-in ${e.delay}s infinite`,
+          }}
+        />
+      ))}
+
+      {/* Top ember rule */}
+      <div
+        style={{
+          width: 340,
+          maxWidth: "70vw",
+          height: 2,
+          background: `linear-gradient(90deg, transparent, #FF7A3C, #FFD37A, #FF7A3C, transparent)`,
+          transformOrigin: "center",
+          transform: "scaleX(0)",
+          animation: "cl-lineSweep 1.1s cubic-bezier(0.22,1,0.36,1) 0.2s forwards",
+          marginBottom: 26,
+          position: "relative",
+        }}
+      />
+
+      {/* Title, letter by letter, burning in slowly */}
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", maxWidth: "80vw", position: "relative" }}>
+        {letters.map((ch, i) => {
+          const delay = letterStart + i * letterStep;
+          return (
+            <span
+              key={i}
+              style={{
+                fontFamily: "Georgia, 'Times New Roman', serif",
+                fontSize: "clamp(20px, 4vw, 34px)",
+                fontWeight: 700,
+                letterSpacing: 2,
+                opacity: 0,
+                display: "inline-block",
+                whiteSpace: "pre",
+                backgroundImage: fireGradient,
+                backgroundSize: "100% 300%",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+                animation: `cl-letterRevealSlow 0.9s cubic-bezier(0.22,1,0.36,1) ${delay}s forwards, cl-flameShift 2.4s ease-in-out ${delay + 0.9}s infinite, cl-flameFlicker 1.7s ease-in-out ${delay + 0.9}s infinite`,
+              }}
+            >
+              {ch === " " ? "\u00A0" : ch}
+            </span>
+          );
+        })}
+      </div>
+
+      {/* Wax-seal emblem, now stamped in ember tones */}
+      <div
+        style={{
+          position: "relative",
+          marginTop: 30,
+          width: 64,
+          height: 64,
+          opacity: 0,
+          animation: "cl-stampIn 0.9s cubic-bezier(0.34,1.56,0.64,1) 4.4s forwards",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: "50%",
+            animation: "cl-emberRingPulse 1.4s ease-out 4.6s",
+          }}
+        />
+        <div
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: "50%",
+            border: "2.5px solid #FF9552",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "radial-gradient(circle, rgba(255,122,60,0.22) 0%, rgba(232,67,43,0.08) 100%)",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "Georgia, serif",
+              fontWeight: 700,
+              fontSize: 20,
+              letterSpacing: 1,
+              backgroundImage: fireGradient,
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              color: "transparent",
+            }}
+          >
+            CL
+          </span>
+        </div>
+      </div>
+
+      {/* Sweeping ember underline */}
+      <div
+        style={{
+          width: 220,
+          height: 1,
+          background: "linear-gradient(90deg, transparent, #FF7A3C, #FFD37A, transparent)",
+          transform: "scaleX(0)",
+          marginTop: 26,
+          animation: "cl-lineSweep 1s cubic-bezier(0.22,1,0.36,1) 5.7s forwards",
+        }}
+      />
+
+      {/* Tagline */}
+      <div
+        style={{
+          marginTop: 18,
+          fontFamily: "system-ui, sans-serif",
+          fontSize: 13,
+          color: `${PARCHMENT}99`,
+          letterSpacing: 0.4,
+          opacity: 0,
+          animation: "cl-fadeUp 0.7s ease 6.2s forwards",
+        }}
+      >
+        41 original DipIFR practice questions · CSFP · CSPL · Foreign Translation
+      </div>
+
+      {/* Loading whisper, embers glowing through the text */}
+      <div
+        style={{
+          marginTop: 34,
+          fontFamily: "'Courier New', monospace",
+          fontSize: 11,
+          letterSpacing: 1.2,
+          opacity: 0,
+          backgroundImage: fireGradient,
+          WebkitBackgroundClip: "text",
+          backgroundClip: "text",
+          color: "transparent",
+          animation: "cl-fadeUp 0.6s ease 6.8s forwards, cl-flameShift 1.8s ease-in-out 7.4s infinite",
+        }}
+      >
+        PREPARING YOUR LEDGER…
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   RIPPLE HELPER
+   Spawns a short-lived ink-ripple span at the click point of
+   whatever element it's attached to (via onMouseDown). Works on
+   any element that has (or gets) position:relative + overflow:hidden
+   — apply the "cl-rippleable" class alongside this handler.
+   ============================================================ */
+function spawnRipple(e) {
+  const el = e.currentTarget;
+  const rect = el.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height) * 1.4;
+  const span = document.createElement("span");
+  span.className = "cl-ripple-span";
+  span.style.width = `${size}px`;
+  span.style.height = `${size}px`;
+  span.style.left = `${e.clientX - rect.left - size / 2}px`;
+  span.style.top = `${e.clientY - rect.top - size / 2}px`;
+  el.appendChild(span);
+  span.addEventListener("animationend", () => span.remove());
+}
+
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
   const [selectedId, setSelectedId] = useState(QUESTIONS[0].id);
   const [tab, setTab] = useState("question");
+  const [tabDirection, setTabDirection] = useState("right");
   const [query, setQuery] = useState("");
   const [filterPart, setFilterPart] = useState("All");
   const [revealed, setRevealed] = useState({});
+
+  const TAB_ORDER = ["question", "solution", "marking", "tricks"];
+  const changeTab = (nextTab) => {
+    const from = TAB_ORDER.indexOf(tab);
+    const to = TAB_ORDER.indexOf(nextTab);
+    setTabDirection(to >= from ? "right" : "left");
+    setTab(nextTab);
+  };
+  const selectQuestion = (id) => {
+    setSelectedId(id);
+    setTabDirection("right");
+    setTab("question");
+  };
 
   const filtered = useMemo(() => {
     return QUESTIONS.filter((q) => {
@@ -2859,16 +3279,19 @@ function App() {
   const current = QUESTIONS.find((q) => q.id === selectedId) || QUESTIONS[0];
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: PARCHMENT,
-        color: INK,
-        fontFamily: "system-ui, sans-serif",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
+    <>
+      <GlobalStyles />
+      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
+      <div
+        style={{
+          minHeight: "100vh",
+          background: PARCHMENT,
+          color: INK,
+          fontFamily: "system-ui, sans-serif",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
       {/* Header / folio strip */}
       <div
         style={{
@@ -2935,6 +3358,8 @@ function App() {
                   <button
                     key={p}
                     onClick={() => setFilterPart(p)}
+                    onMouseDown={spawnRipple}
+                    className="cl-rippleable cl-filter-btn"
                     style={{
                       flex: "1 1 auto",
                       minWidth: 56,
@@ -2955,15 +3380,14 @@ function App() {
             </div>
           </div>
           <div style={{ overflowY: "auto", flex: 1 }}>
-            {filtered.map((q) => {
+            {filtered.map((q, idx) => {
               const isSel = q.id === selectedId;
               return (
                 <button
-                  key={q.id}
-                  onClick={() => {
-                    setSelectedId(q.id);
-                    setTab("question");
-                  }}
+                  key={`${q.id}-${filterPart}-${query}`}
+                  onClick={() => selectQuestion(q.id)}
+                  onMouseDown={spawnRipple}
+                  className="cl-rippleable cl-row-cascade"
                   style={{
                     display: "block",
                     width: "100%",
@@ -2973,6 +3397,7 @@ function App() {
                     borderLeft: isSel ? `3px solid ${BRASS}` : "3px solid transparent",
                     borderBottom: `1px solid ${INK}0d`,
                     cursor: "pointer",
+                    animationDelay: `${Math.min(idx, 20) * 0.028}s`,
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
@@ -3009,7 +3434,7 @@ function App() {
 
         {/* Main panel */}
         <div style={{ flex: 1, overflowY: "auto", padding: "24px 32px" }}>
-          <div style={{ maxWidth: 860, margin: "0 auto" }}>
+          <div key={current.id} className="cl-question-enter" style={{ maxWidth: 860, margin: "0 auto" }}>
             {/* Folio header */}
             <div
               style={{
@@ -3047,6 +3472,8 @@ function App() {
                 </h1>
               </div>
               <div
+                key={`marks-${current.id}`}
+                className="cl-folio-glow"
                 style={{
                   border: `2px solid ${INK}`,
                   borderRadius: 6,
@@ -3090,7 +3517,9 @@ function App() {
               ].map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
-                  onClick={() => setTab(key)}
+                  onClick={() => changeTab(key)}
+                  onMouseDown={spawnRipple}
+                  className="cl-rippleable"
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -3112,7 +3541,12 @@ function App() {
               ))}
             </div>
 
-            {/* Content */}
+            {/* Content — keyed on question+tab so it replays its entrance
+                animation every time either changes */}
+            <div
+              key={`${current.id}-${tab}`}
+              className={tabDirection === "right" ? "cl-tab-enter-right" : "cl-tab-enter-left"}
+            >
             {tab === "question" && (
               <div>
                 <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 14, marginBottom: 10 }}>
@@ -3135,7 +3569,9 @@ function App() {
                   <strong>Required:</strong> {current.requirement}
                 </div>
                 <button
-                  onClick={() => setTab("solution")}
+                  onClick={() => changeTab("solution")}
+                  onMouseDown={spawnRipple}
+                  className="cl-rippleable"
                   style={{
                     marginTop: 20,
                     display: "flex",
@@ -3238,10 +3674,12 @@ function App() {
                 ))}
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
