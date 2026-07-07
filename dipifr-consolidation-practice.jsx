@@ -1,0 +1,3127 @@
+import { useState, useMemo } from "react";
+import { BookOpen, ChevronRight, Search, Eye, EyeOff, ListChecks, Lightbulb, FileText, Layers } from "lucide-react";
+
+/* ============================================================
+   LEDGER TOKENS
+   Ink navy / parchment / brass — a bound-ledger aesthetic.
+   Numbers always in tabular monospace, never proportional.
+   ============================================================ */
+const INK = "#16232E";
+const PARCHMENT = "#F1ECDE";
+const BRASS = "#A9823C";
+const DEBIT = "#8B3A3A";
+const CREDIT = "#3F6B4F";
+const SLATE = "#5B6B77";
+
+/* ============================================================
+   DATA
+   30 original DipIFR-style consolidation questions.
+   All companies, figures and scenarios are invented for this
+   practice set — not reproduced from any published source.
+   ============================================================ */
+
+const QUESTIONS = [
+  // ---------------------------------------------------------
+  // PART A — CONSOLIDATED STATEMENT OF FINANCIAL POSITION (15)
+  // ---------------------------------------------------------
+  {
+    id: "sfp-01", part: "SFP", difficulty: "Easy", marks: 25, time: 49,
+    title: "Halcyon acquires Merit — mid-year acquisition, PPE fair value uplift, NCI at fair value",
+    tags: ["Goodwill", "FV uplift on PPE", "NCI at fair value", "Mid-year acquisition"],
+    scenario: [
+      "Halcyon Co acquired 80% of the equity shares of Merit Co on 1 October 20X5, paying cash of $45,000,000. Halcyon's year end is 31 March 20X6.",
+      "At acquisition, Merit's retained earnings were $22,000,000 and its share capital was $10,000,000 (unchanged since incorporation).",
+      "At acquisition, Merit's land and buildings had a carrying amount of $18,000,000 and a fair value of $24,000,000. The buildings element (fair value $14,000,000) had a remaining useful life of 20 years at acquisition; land is not depreciated. Merit's accounting policy is cost model; no adjustment has been made in Merit's individual financial statements.",
+      "The fair value of the non-controlling interest at acquisition was $10,500,000.",
+      "At 31 March 20X6, an impairment review concluded that consolidated goodwill was impaired by $1,200,000.",
+      "At 31 March 20X6, Merit's retained earnings were $25,000,000.",
+    ],
+    requirement: "Calculate (a) goodwill on acquisition, (b) the non-controlling interest at 31 March 20X6, and (c) consolidated retained earnings at 31 March 20X6.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Group structure & timeline",
+          rows: [
+            ["Holding acquired", "80% (1 Oct 20X5)"],
+            ["Reporting date", "31 Mar 20X6"],
+            ["Post-acquisition period", "6 months"],
+          ],
+        },
+        {
+          heading: "W2 — Fair value adjustment (buildings)",
+          rows: [
+            ["Fair value at acquisition", "14,000,000"],
+            ["Carrying amount at acquisition", "(10,000,000)*"],
+            ["FV uplift at acquisition", "4,000,000"],
+            ["Additional depreciation: 4,000,000 / 20 yrs x 6/12", "(100,000)"],
+            ["FV uplift in net assets at 31 Mar 20X6", "3,900,000"],
+          ],
+          note: "*Land uplift 6,000,000 (24,000,000 − 18,000,000 total, less 4,000,000 buildings = 6,000,000 land) is not depreciated and stays at 6,000,000 throughout. Total uplift at acquisition = 10,000,000 (6,000,000 land + 4,000,000 buildings).",
+        },
+        {
+          heading: "W3 — Net assets of Merit",
+          rows: [
+            ["", "At acquisition", "At reporting date"],
+            ["Share capital", "10,000,000", "10,000,000"],
+            ["Retained earnings", "22,000,000", "25,000,000"],
+            ["FV adjustment — land", "6,000,000", "6,000,000"],
+            ["FV adjustment — buildings (net of extra dep'n)", "4,000,000", "3,900,000"],
+            ["Net assets", "42,000,000", "44,900,000"],
+          ],
+          isTable: true,
+        },
+        {
+          heading: "W4 — Goodwill",
+          rows: [
+            ["Consideration transferred", "45,000,000"],
+            ["Fair value of NCI at acquisition", "10,500,000"],
+            ["Less: fair value of net assets at acquisition (W3)", "(42,000,000)"],
+            ["Goodwill on acquisition", "13,500,000"],
+            ["Impairment to date", "(1,200,000)"],
+            ["Goodwill carried at 31 Mar 20X6", "12,300,000"],
+          ],
+        },
+        {
+          heading: "W5 — Non-controlling interest at 31 Mar 20X6 (fair value method)",
+          rows: [
+            ["NCI at acquisition (fair value)", "10,500,000"],
+            ["NCI% x post-acq increase in net assets: 20% x (44,900,000 − 42,000,000)", "580,000"],
+            ["NCI% x goodwill impairment: 20% x 1,200,000", "(240,000)"],
+            ["NCI at 31 Mar 20X6", "10,840,000"],
+          ],
+        },
+        {
+          heading: "W6 — Consolidated retained earnings at 31 Mar 20X6",
+          rows: [
+            ["Halcyon's own retained earnings (per question — assume X)", "X"],
+            ["Halcyon's share of Merit's post-acq net asset movement: 80% x 2,900,000", "2,320,000"],
+            ["Less: Halcyon's share of goodwill impairment: 80% x 1,200,000", "(960,000)"],
+            ["Consolidated retained earnings", "X + 1,360,000"],
+          ],
+          note: "In the live exam, Halcyon's own RE figure is given in the trial balance — simply add the net post-acquisition adjustment of +1,360,000 to it.",
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Correctly identify 6-month post-acquisition period", marks: 1 },
+      { point: "FV uplift split between land (6,000,000) and buildings (4,000,000)", marks: 2 },
+      { point: "Additional depreciation on buildings uplift, time-apportioned", marks: 2 },
+      { point: "Net assets at acquisition table (share capital + RE + FV uplift)", marks: 2 },
+      { point: "Net assets at reporting date table", marks: 2 },
+      { point: "Goodwill calculation using FV of NCI", marks: 3 },
+      { point: "Goodwill impairment deducted", marks: 1 },
+      { point: "NCI b/f at fair value", marks: 1 },
+      { point: "NCI share of post-acq net asset movement", marks: 2 },
+      { point: "NCI share of goodwill impairment (FV method only)", marks: 2 },
+      { point: "Parent's share of post-acq net asset movement in consolidated RE", marks: 2 },
+      { point: "Parent's share of goodwill impairment in consolidated RE", marks: 2 },
+      { point: "Overall structure, presentation, workings referenced", marks: 3 },
+    ],
+    tricks: [
+      "The commonest error is depreciating the FV uplift on land — land is never depreciated under IAS 16, only the buildings element.",
+      "Additional depreciation must be time-apportioned to the post-acquisition period only (6/12), not a full year — the sub's own financial statements already include its own depreciation charge for the full year.",
+      "Under the fair value method, the NCI absorbs its share of goodwill impairment. If the question instead uses the proportionate share method, goodwill relating to NCI is never recognised, so NO goodwill impairment is allocated to NCI — only the parent's share of goodwill is impaired and only the parent's share hits consolidated RE.",
+      "Watch which NCI method the question specifies (fair value vs proportionate share of net assets) — this single word changes both the goodwill and the NCI/impairment allocation.",
+    ],
+  },
+  {
+    id: "sfp-02", part: "SFP", difficulty: "Easy", marks: 25, time: 49,
+    title: "Ferrous acquires Wexler — unrealised profit on intra-group inventory, NCI at proportionate share",
+    tags: ["PUP inventory", "NCI proportionate share", "Upstream sale"],
+    scenario: [
+      "Ferrous Co acquired 75% of Wexler Co on 1 January 20X2 for cash of $30,000,000, when Wexler's net assets were $32,000,000. Ferrous measures NCI at its proportionate share of Wexler's identifiable net assets.",
+      "Wexler's net assets at 31 December 20X4 (the reporting date) were $41,000,000.",
+      "During the year ended 31 December 20X4, Wexler sold goods to Ferrous for $6,000,000 at a margin of 25% on selling price. At the reporting date, 40% of these goods remained in Ferrous's inventory.",
+      "Goodwill has not been impaired.",
+    ],
+    requirement: "Calculate (a) goodwill on acquisition, (b) the provision for unrealised profit (PUP) adjustment required, (c) NCI at 31 December 20X4, and (d) the consolidation adjustment to consolidated retained earnings.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Goodwill (proportionate share method)",
+          rows: [
+            ["Consideration transferred", "30,000,000"],
+            ["NCI at acquisition: 25% x 32,000,000", "8,000,000"],
+            ["Less: net assets at acquisition", "(32,000,000)"],
+            ["Goodwill (not impaired)", "6,000,000"],
+          ],
+        },
+        {
+          heading: "W2 — Unrealised profit (PUP) on intra-group inventory",
+          rows: [
+            ["Intra-group sales", "6,000,000"],
+            ["Inventory unsold at year end: 40% x 6,000,000", "2,400,000"],
+            ["Margin on selling price", "25%"],
+            ["Unrealised profit: 2,400,000 x 25%", "600,000"],
+          ],
+          note: "Because Wexler (the SUBSIDIARY, i.e. the NCI-bearing entity) is the SELLER, this is an upstream sale. The unrealised profit sits in Wexler's own retained earnings and must be removed before splitting Wexler's post-acquisition profit between parent and NCI.",
+        },
+        {
+          heading: "W3 — Net assets of Wexler, PUP-adjusted",
+          rows: [
+            ["", "At acquisition", "At reporting date"],
+            ["Net assets per question", "32,000,000", "41,000,000"],
+            ["Less: PUP on unrealised inventory profit", "-", "(600,000)"],
+            ["Adjusted net assets", "32,000,000", "40,400,000"],
+          ],
+          isTable: true,
+        },
+        {
+          heading: "W4 — NCI at 31 December 20X4 (proportionate share)",
+          rows: [
+            ["NCI% x adjusted net assets at reporting date: 25% x 40,400,000", "10,100,000"],
+          ],
+          note: "Under the proportionate share method, NCI is simply recalculated at 25% of adjusted closing net assets — no separate 'movement' working is required, and goodwill impairment (there is none here) is never allocated to NCI.",
+        },
+        {
+          heading: "W5 — Consolidated retained earnings adjustment",
+          rows: [
+            ["Post-acquisition movement in adjusted net assets: 40,400,000 − 32,000,000", "8,400,000"],
+            ["Parent's share: 75% x 8,400,000", "6,300,000"],
+          ],
+          note: "Add 6,300,000 to Ferrous's own retained earnings to get the consolidated figure (assuming no other adjustments).",
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Goodwill: consideration + NCI at share of net assets − net assets acquired", marks: 3 },
+      { point: "Identify upstream nature of the sale", marks: 1 },
+      { point: "Correct inventory unsold calculation (40% x 6,000,000)", marks: 2 },
+      { point: "Correct margin application to unsold inventory (25% of SP)", marks: 2 },
+      { point: "PUP deducted from Wexler's net assets at reporting date only", marks: 3 },
+      { point: "NCI recalculated at 25% of adjusted closing net assets", marks: 3 },
+      { point: "No goodwill impairment allocated to NCI (proportionate method)", marks: 2 },
+      { point: "Parent's share of adjusted post-acquisition movement", marks: 3 },
+      { point: "Clear W-referencing and narrative on upstream vs downstream", marks: 2 },
+      { point: "Presentation", marks: 4 },
+    ],
+    tricks: [
+      "Margin vs mark-up is the classic trap: 'margin of 25% on selling price' means profit = 25% x SP. If it said 'mark-up of 25% on cost' the profit fraction would be 25/125 x SP instead — always read which base the percentage applies to.",
+      "Upstream vs downstream matters because upstream unrealised profit sits inside the subsidiary's own retained earnings, so it must be stripped out of the SUBSIDIARY's net assets before the NCI share is calculated — otherwise NCI unfairly shares in profit that hasn't really been earned yet. A downstream sale (parent selling to sub) would instead reduce only the parent's own retained earnings, with no NCI impact at all.",
+      "Under the proportionate share method there is no separate 'NCI b/f + share of movement − share of impairment' working — NCI is just recalculated wholesale as % x adjusted closing net assets. Candidates who mechanically apply the FV-method roll-forward here lose marks for unnecessary/incorrect workings.",
+    ],
+  },
+  {
+    id: "sfp-03", part: "SFP", difficulty: "Medium", marks: 25, time: 49,
+    title: "Praxis acquires Solenne — fair value uplift on inventory sold post-acquisition, deferred tax on FV adjustments",
+    tags: ["FV uplift inventory", "Deferred tax on FV adjustments", "Goodwill"],
+    scenario: [
+      "Praxis Co acquired 70% of Solenne Co on 1 April 20X6 for $52,000,000 cash. Solenne's net assets at acquisition, per its own financial statements, were $48,000,000 (including retained earnings of $30,000,000).",
+      "At acquisition, Solenne's inventory had a carrying amount of $9,000,000 and a fair value of $11,500,000. All of this inventory was sold to third parties by 31 December 20X6 (Praxis's year end).",
+      "Solenne also held a customer list (an identifiable intangible asset not recognised in its own statement of financial position) with a fair value of $3,000,000 at acquisition, and a remaining useful life of 5 years.",
+      "The applicable tax rate is 25%. Deferred tax must be recognised on all fair value adjustments not reflected in the tax base.",
+      "Fair value of the NCI at acquisition was $19,800,000. Solenne's retained earnings at 31 December 20X6 were $34,000,000.",
+      "No impairment of goodwill has occurred.",
+    ],
+    requirement: "Calculate goodwill on acquisition and consolidated retained earnings at 31 December 20X6.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Fair value adjustments at acquisition, net of deferred tax",
+          rows: [
+            ["Inventory uplift: 11,500,000 − 9,000,000", "2,500,000"],
+            ["Customer list (unrecognised intangible)", "3,000,000"],
+            ["Gross fair value adjustments", "5,500,000"],
+            ["Deferred tax at 25%", "(1,375,000)"],
+            ["Net fair value adjustments at acquisition", "4,125,000"],
+          ],
+        },
+        {
+          heading: "W2 — Movement in FV adjustments to 31 December 20X6 (9 months)",
+          rows: [
+            ["Inventory uplift — fully realised (sold to third parties): reverses to nil", "(2,500,000)"],
+            ["Related deferred tax on inventory reverses: 2,500,000 x 25%", "625,000"],
+            ["Customer list amortisation: 3,000,000/5 yrs x 9/12", "(450,000)"],
+            ["Related deferred tax on amortisation: 450,000 x 25%", "112,500"],
+          ],
+          note: "The inventory FV uplift does not sit in net assets permanently like a building uplift — once the inventory is sold outside the group, the uplift has 'done its job' (it is embedded in Solenne's own cost of sales/profit for the period) and drops out of the FV-adjustment working entirely.",
+        },
+        {
+          heading: "W3 — Net assets of Solenne",
+          rows: [
+            ["", "At acquisition", "At 31 Dec 20X6"],
+            ["Share capital + pre-acq reserves (48,000,000 − 30,000,000)", "18,000,000", "18,000,000"],
+            ["Retained earnings", "30,000,000", "34,000,000"],
+            ["Net FV adjustments (W1/W2)", "4,125,000", "1,287,500*"],
+            ["Net assets", "52,125,000", "53,287,500"],
+          ],
+          isTable: true,
+          note: "*1,287,500 = 4,125,000 − 2,500,000 (inventory reversal) + 625,000 (DT release) − 450,000 (amortisation) + 112,500 (DT release) — netted: customer list 3,000,000 − 450,000 amort = 2,550,000, less DT (3,000,000−450,000)x25% = 637,500, net 1,912,500; inventory nets to nil net of tax. Recompute: 2,550,000 − 637,500 = 1,912,500. Use 1,912,500 as the carried FV adjustment; net assets at 31 Dec 20X6 = 30,000,000+18,000,000+1,912,500 = 49,912,500.",
+        },
+        {
+          heading: "W4 — Goodwill",
+          rows: [
+            ["Consideration transferred", "52,000,000"],
+            ["Fair value of NCI at acquisition", "19,800,000"],
+            ["Less: fair value of net assets at acquisition (W3)", "(52,125,000)"],
+            ["Goodwill on acquisition", "19,675,000"],
+          ],
+        },
+        {
+          heading: "W5 — Consolidated retained earnings",
+          rows: [
+            ["Post-acquisition movement in net assets: 49,912,500 − 52,125,000", "(2,212,500)"],
+            ["Parent's share: 70% x (2,212,500)", "(1,548,750)"],
+          ],
+          note: "The negative movement arises because the inventory uplift (a one-off acquisition-date asset) has fully unwound, outweighing the underlying trading profit increase and outstripping the small remaining customer-list carrying value. Add this (negative) figure to Praxis's own retained earnings.",
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Recognise unrecognised intangible (customer list) as a FV adjustment", marks: 2 },
+      { point: "Inventory uplift correctly identified and fully reversed on sale to third parties", marks: 3 },
+      { point: "Deferred tax calculated on gross FV adjustments at acquisition", marks: 2 },
+      { point: "Deferred tax released as each FV adjustment unwinds/amortises", marks: 3 },
+      { point: "Customer list amortised over useful life, time-apportioned", marks: 2 },
+      { point: "Net assets table at acquisition and reporting date, tax-adjusted", marks: 3 },
+      { point: "Goodwill calculation", marks: 3 },
+      { point: "Post-acquisition movement correctly carried to consolidated RE", marks: 3 },
+      { point: "Recognition that inventory FV adjustment is temporary, not permanent like PPE", marks: 2 },
+      { point: "Presentation and clarity of workings", marks: 2 },
+    ],
+    tricks: [
+      "This is the classic 'fair value uplift on inventory' trap: unlike a building uplift (which stays in net assets and is depreciated slowly), an inventory uplift disappears entirely the moment the inventory is sold onward — it converts into (lower) profit for the period rather than remaining as a balance sheet adjustment. Candidates who carry the inventory uplift forward to the year-end net assets table overstate net assets and goodwill's mirror image.",
+      "Unrecognised intangibles (customer lists, brand names, order backlogs) identified only on acquisition must be brought onto the consolidated SFP as part of the fair value exercise even though the subsidiary never recognised them itself — then amortised like any other intangible with a finite life.",
+      "Deferred tax must be provided on every fair value adjustment that isn't matched by an equivalent tax-base change — this is one of the most commonly missed 2–3 marks in DipIFR consolidation questions. As adjustments unwind (inventory sold, intangible amortised), the deferred tax liability unwinds too and is credited back through the net assets working.",
+    ],
+  },
+  {
+    id: "sfp-04", part: "SFP", difficulty: "Medium", marks: 25, time: 49,
+    title: "Carraway acquires Dunmore — deferred and contingent consideration requiring discounting",
+    tags: ["Deferred consideration", "Contingent consideration", "Discounting", "Goodwill"],
+    scenario: [
+      "Carraway Co acquired 100% of Dunmore Co on 1 January 20X5. Consideration comprised: cash of $20,000,000 paid immediately; a further $10,000,000 payable on 1 January 20X7 (deferred consideration); and a contingent amount payable if Dunmore's post-acquisition earnings exceed a target, with an acquisition-date fair value of $4,000,000.",
+      "Carraway's cost of capital is 10%. The discount factor for 2 years at 10% is 0.826.",
+      "At the reporting date, 31 December 20X6, the earnings target has been met and the contingent consideration is now expected to be settled at $5,500,000 — this increase reflects a change in circumstances arising after the acquisition date, not new information about conditions at acquisition.",
+      "Dunmore's net assets at acquisition were $22,000,000; at 31 December 20X6, $27,000,000.",
+      "No impairment of goodwill has arisen. Unwinding of the discount on deferred consideration should be charged to finance costs; the deferred consideration liability itself is carried at amortised cost.",
+    ],
+    requirement: "Calculate goodwill on acquisition, the carrying amount of the deferred consideration liability at 31 December 20X6, and the double entry required for the change in contingent consideration.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Consideration transferred at acquisition (present value basis)",
+          rows: [
+            ["Cash paid immediately", "20,000,000"],
+            ["Deferred consideration at present value: 10,000,000 x 0.826", "8,260,000"],
+            ["Contingent consideration at acquisition-date fair value", "4,000,000"],
+            ["Total consideration transferred", "32,260,000"],
+          ],
+        },
+        {
+          heading: "W2 — Goodwill on acquisition",
+          rows: [
+            ["Total consideration transferred (W1)", "32,260,000"],
+            ["NCI at acquisition (100% acquired — nil NCI)", "-"],
+            ["Less: net assets at acquisition", "(22,000,000)"],
+            ["Goodwill on acquisition", "10,260,000"],
+          ],
+        },
+        {
+          heading: "W3 — Deferred consideration liability at 31 December 20X6 (amortised cost)",
+          rows: [
+            ["Liability at acquisition (1 Jan 20X5)", "8,260,000"],
+            ["Unwinding of discount, year 1 (20X5): 8,260,000 x 10%", "826,000"],
+            ["Liability at 31 Dec 20X5", "9,086,000"],
+            ["Unwinding of discount, year 2 (20X6): 9,086,000 x 10%", "908,600"],
+            ["Liability at 31 Dec 20X6 (= 10,000,000, rounding)", "9,994,600"],
+          ],
+          note: "By the payment date the liability unwinds to the full 10,000,000 payable (small rounding difference from the discount factor used). Each year's unwinding is charged to finance costs in the SPL, not to goodwill — goodwill is frozen at the acquisition-date present value and never re-measured for the unwinding of the discount.",
+        },
+        {
+          heading: "W4 — Contingent consideration re-measurement",
+          rows: [
+            ["Fair value at acquisition (part of goodwill, W1/W2)", "4,000,000"],
+            ["Revised fair value at 31 Dec 20X6", "5,500,000"],
+            ["Increase in liability", "1,500,000"],
+          ],
+          note: "Double entry: Dr Profit or loss (re-measurement expense) 1,500,000 / Cr Contingent consideration liability 1,500,000. Because the increase reflects post-acquisition performance (a measurement-period event occurring AFTER the one-year measurement period, or simply a post-acquisition change in circumstances), it is NOT a measurement-period adjustment to goodwill — it is recognised in profit or loss for the period, per IFRS 3. Goodwill remains frozen at 10,260,000.",
+        },
+        {
+          heading: "W5 — Net assets & consolidated retained earnings",
+          rows: [
+            ["Post-acquisition movement in net assets: 27,000,000 − 22,000,000", "5,000,000"],
+            ["Add to Carraway's own retained earnings (100% owned, no NCI)", "5,000,000"],
+            ["Less: cumulative discount unwinding charged to finance costs (20X5+20X6)", "(1,734,600)"],
+            ["Less: contingent consideration re-measurement loss", "(1,500,000)"],
+          ],
+          note: "The discount-unwinding and re-measurement charges reduce group retained earnings through the SPL for each period — they do not touch goodwill.",
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Discount deferred consideration to present value using given factor", marks: 3 },
+      { point: "Include contingent consideration at acquisition-date fair value in goodwill", marks: 3 },
+      { point: "Goodwill correctly computed with nil NCI (100% acquisition)", marks: 2 },
+      { point: "Unwinding of discount calculated year by year at the discount rate", marks: 3 },
+      { point: "Unwinding charged to finance costs, not to goodwill", marks: 2 },
+      { point: "Recognise that post-acquisition change in contingent consideration FV goes to P/L", marks: 4 },
+      { point: "Correct double entry for contingent consideration re-measurement", marks: 2 },
+      { point: "Goodwill not re-measured for either the discount unwind or the contingent re-measurement", marks: 3 },
+      { point: "Consolidated retained earnings reflects both P/L charges", marks: 2 },
+      { point: "Presentation and workings clarity", marks: 1 },
+    ],
+    tricks: [
+      "The single biggest trap in this area: candidates re-adjust goodwill every time the contingent consideration's fair value changes. Under IFRS 3, goodwill is only adjusted for contingent consideration changes within the ONE-YEAR measurement period that relate to facts and circumstances existing AT the acquisition date. Any other change — including simply performance turning out better or worse than expected — goes through profit or loss, full stop.",
+      "Deferred consideration must always be discounted to present value if the time value of money is material (which DipIFR questions signal via a discount rate and factor) — using the undiscounted $10,000,000 figure in goodwill is a very common, very costly, error.",
+      "The unwinding of the discount is a finance cost each period — it increases the liability and reduces retained earnings through the SPL, but it never changes the goodwill figure, which is fixed forever at acquisition (subject only to impairment).",
+    ],
+  },
+  {
+    id: "sfp-05", part: "SFP", difficulty: "Medium", marks: 25, time: 49,
+    title: "Aldergate acquires Brindle — intra-group current account, cash-in-transit and goods-in-transit reconciliation",
+    tags: ["Intra-group balances", "Cash in transit", "Goods in transit", "Consolidation adjustments"],
+    scenario: [
+      "Aldergate Co owns 90% of Brindle Co. At 31 December 20X7, Aldergate's receivables include $4,600,000 due from Brindle; Brindle's payables include only $3,900,000 due to Aldergate.",
+      "The difference is explained by: (i) Brindle remitted $500,000 to Aldergate on 28 December 20X7, which Aldergate did not receive (and therefore did not record) until 3 January 20X8 (cash in transit); and (ii) Aldergate had despatched goods invoiced at $200,000 to Brindle on 30 December 20X7, which Brindle had not yet received or recorded at the year end (goods in transit).",
+      "None of the goods in transit had been sold onward by either company at the year end.",
+    ],
+    requirement: "Reconcile the intra-group balances and state the consolidation adjustments required before elimination.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Reconciliation of intra-group balances",
+          rows: [
+            ["Aldergate: receivable from Brindle (per books)", "4,600,000"],
+            ["Less: cash in transit not yet recorded by Aldergate", "(500,000)"],
+            ["Adjusted Aldergate receivable", "4,100,000"],
+            ["Brindle: payable to Aldergate (per books)", "3,900,000"],
+            ["Add: goods in transit not yet recorded by Brindle", "200,000"],
+            ["Adjusted Brindle payable", "4,100,000"],
+          ],
+        },
+        {
+          heading: "W2 — Consolidation adjustments (single entity concept)",
+          rows: [
+            ["1. Cash in transit: Dr Cash 500,000 / Cr Receivables (Aldergate) 500,000", "—"],
+            ["2. Goods in transit: Dr Inventory (Brindle) 200,000 / Cr Payables (Brindle) 200,000", "—"],
+            ["3. Eliminate matched intra-group balance: Dr Payables 4,100,000 / Cr Receivables 4,100,000", "—"],
+          ],
+          note: "Adjustments 1 and 2 restate each entity's own books to reflect the transaction as if it had already been recorded — this is what makes the two balances agree at 4,100,000 so they can be fully eliminated on consolidation. Adjustment 3 is the actual intra-group elimination.",
+        },
+        {
+          heading: "W3 — Effect on consolidated SFP",
+          rows: [
+            ["Consolidated cash: increase by 500,000 (both group entities' cash combined already includes Brindle's payment out — the adjustment simply moves it to 'in transit' cash rather than leaving it stranded as an unmatched receivable)", "—"],
+            ["Consolidated inventory: increase by 200,000 (goods still belong to the group and physically exist, just in transit)", "—"],
+            ["No unrealised profit adjustment required — none of the goods in transit had been sold onward by the year end", "—"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Identify cash in transit as the cause of part of the difference", marks: 3 },
+      { point: "Identify goods in transit as the cause of the remaining difference", marks: 3 },
+      { point: "Correct double entry to record cash in transit in Aldergate's books", marks: 3 },
+      { point: "Correct double entry to record goods in transit in Brindle's books", marks: 3 },
+      { point: "Reconcile both balances to the same adjusted figure (4,100,000)", marks: 4 },
+      { point: "Eliminate the matched intra-group balance in full", marks: 4 },
+      { point: "Recognise no PUP adjustment is needed as none of the goods had been sold onward", marks: 3 },
+      { point: "Clear narrative explaining the single-entity rationale", marks: 2 },
+    ],
+    tricks: [
+      "Intra-group receivables and payables must match exactly before they can be eliminated — if a DipIFR question gives you two different numbers, that is your signal that cash-in-transit and/or goods-in-transit adjustments are needed, not a hint to eliminate 'the lower of the two' (a common wrong shortcut).",
+      "Cash in transit is recorded as an addition to cash and a reduction to the receivable in the RECEIVING company's own books — it does not require inventing a new consolidated-only adjustment, it is simply completing double entry that the individual company hadn't yet processed.",
+      "Goods in transit must always be checked for whether any of the goods have already been sold on to a third party by the year end — if some had been sold, only the portion still held in inventory needs the receiving-company adjustment, and any margin embedded in unsold transit inventory would still require a PUP adjustment if it had been invoiced above cost.",
+    ],
+  },
+  {
+    id: "sfp-06", part: "SFP", difficulty: "Medium", marks: 25, time: 49,
+    title: "Northgate holds 30% of Ashworth — equity-accounted associate, with an impairment of the investment",
+    tags: ["Associate", "Equity method", "Impairment of investment"],
+    scenario: [
+      "Northgate Co acquired 30% of the equity shares of Ashworth Co on 1 January 20X5 for $9,000,000, obtaining significant influence but not control.",
+      "Ashworth's net assets were $27,000,000 at acquisition and $33,000,000 at 31 December 20X6.",
+      "Ashworth paid a dividend of $2,000,000 in the year ended 31 December 20X6; Northgate has recorded its share as investment income.",
+      "At 31 December 20X6, Northgate's directors believe the recoverable amount of the investment in Ashworth is $10,200,000.",
+    ],
+    requirement: "Calculate the carrying amount of the investment in the associate to be shown in the consolidated statement of financial position at 31 December 20X6, and any impairment loss to be recognised.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Equity-accounted carrying amount before impairment review",
+          rows: [
+            ["Cost of investment at acquisition", "9,000,000"],
+            ["Share of post-acquisition retained profit: 30% x (33,000,000 − 27,000,000)", "1,800,000"],
+            ["Carrying amount before dividend adjustment and impairment review", "10,800,000"],
+          ],
+          note: "Note: Ashworth's net asset movement of 6,000,000 already reflects the dividend paid out of Ashworth's own reserves (dividends reduce the payer's net assets), so no separate dividend deduction is needed in this working — it is automatically captured in the 33,000,000 closing net assets figure.",
+        },
+        {
+          heading: "W2 — Correcting the double-counted dividend income",
+          rows: [
+            ["Northgate incorrectly recorded 30% x 2,000,000 as investment income in its own P/L", "600,000"],
+            ["Correction: Dr Investment income 600,000 / Cr Investment in associate 600,000", "—"],
+          ],
+          note: "Under the equity method, dividends received from an associate are NOT recognised as income — they are a return of the carrying amount, so any dividend income already recorded in the parent's own books must be reversed against the investment.",
+        },
+        {
+          heading: "W3 — Carrying amount before impairment",
+          rows: [
+            ["Per W1", "10,800,000"],
+            ["Less: dividend correction (W2)", "(600,000)"],
+            ["Carrying amount before impairment review", "10,200,000"],
+          ],
+        },
+        {
+          heading: "W4 — Impairment review",
+          rows: [
+            ["Carrying amount before impairment", "10,200,000"],
+            ["Recoverable amount", "10,200,000"],
+            ["Impairment loss", "Nil"],
+          ],
+          note: "In this scenario the carrying amount already equals the recoverable amount once the dividend double-count is corrected — so no further impairment is required. (If a question's carrying amount exceeds recoverable amount after this correction, the shortfall is expensed to profit or loss and the investment written down — impairment of an associate is tested as a single asset under IAS 36, comparing the WHOLE carrying amount of the investment to its recoverable amount, not by separately impairing goodwill within it.)",
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Recognise significant influence / equity method applies (not full consolidation)", marks: 2 },
+      { point: "Cost of investment as starting point", marks: 2 },
+      { point: "Share of post-acquisition profit calculated correctly", marks: 3 },
+      { point: "Identify the dividend has been incorrectly treated as income", marks: 4 },
+      { point: "Correct double entry to reverse dividend income against the investment", marks: 3 },
+      { point: "Carrying amount before impairment correctly stated", marks: 3 },
+      { point: "Impairment review comparing carrying amount to recoverable amount as a single asset", marks: 4 },
+      { point: "Correct conclusion (nil impairment) with reasoning", marks: 2 },
+      { point: "Presentation", marks: 2 },
+    ],
+    tricks: [
+      "The classic associate trap: a dividend received from an associate is a return OF capital under the equity method, not a return ON capital — if the parent has recorded it as investment income (as many exam scenarios deliberately show), it must be reversed out of income and deducted from the carrying value of the investment instead.",
+      "An associate is tested for impairment as ONE single asset (cost + share of post-acq reserves, i.e. the whole equity-accounted carrying amount) compared against its recoverable amount under IAS 36 — you do NOT separately identify 'goodwill within the associate' and impair that piece alone, unlike full consolidation goodwill.",
+      "Never gross up an associate's assets/liabilities on the face of the consolidated SFP — equity accounting is strictly a one-line 'investment in associate' presentation, not proportional consolidation.",
+    ],
+  },
+  {
+    id: "sfp-07", part: "SFP", difficulty: "Hard", marks: 25, time: 49,
+    title: "Ironwood disposes of its entire holding in Copperfield mid-year — gain/loss on disposal",
+    tags: ["Full disposal", "Gain/loss on disposal", "Group retained earnings"],
+    scenario: [
+      "Ironwood Co had held 85% of Copperfield Co for several years. On 30 September 20X8, Ironwood sold its entire holding for cash proceeds of $38,000,000. Ironwood's year end is 31 December 20X8.",
+      "At the date of disposal, the carrying amounts within the consolidated financial statements were: goodwill $6,500,000 (not previously impaired); Copperfield's net assets $30,000,000; and non-controlling interest $4,500,000.",
+      "Copperfield's profit for the 9 months to the date of disposal was $5,000,000, accruing to the group and NCI in the usual proportions and already reflected in the net assets figure above.",
+    ],
+    requirement: "Calculate the group gain or loss on disposal to be recognised in the consolidated statement of profit or loss, and explain how Copperfield is reflected in the consolidated statement of financial position at 31 December 20X8.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Net assets of Copperfield derecognised at disposal date",
+          rows: [
+            ["Net assets at disposal date (given)", "30,000,000"],
+            ["Goodwill at disposal date (given, unimpaired)", "6,500,000"],
+            ["Total carrying amount of Copperfield's net assets + goodwill derecognised", "36,500,000"],
+          ],
+        },
+        {
+          heading: "W2 — Group gain on disposal",
+          rows: [
+            ["Sale proceeds", "38,000,000"],
+            ["Less: net assets + goodwill derecognised (W1)", "(36,500,000)"],
+            ["Add back: NCI derecognised (its carrying amount leaves the group balance sheet entirely)", "4,500,000"],
+            ["Group gain on disposal", "6,000,000"],
+          ],
+          note: "The full derecognition formula is: Proceeds − (net assets + goodwill at disposal) + NCI derecognised = group profit/loss on disposal. Adding back the NCI reflects that on a full disposal, 100% of Copperfield leaves the group (both the 85% share the group owned and the 15% NCI share) — but the group only gave up its own 85% economic interest for the proceeds, so the NCI's share of net assets it never owned must be added back to arrive at the correct gain attributable to the parent.",
+        },
+        {
+          heading: "W3 — Presentation in the consolidated financial statements",
+          rows: [
+            ["Consolidated SPL for the year: include Copperfield's results (revenue, expenses, NCI share of profit) for the 9 months to disposal, on a line-by-line basis exactly as normal, PLUS the group gain on disposal of 6,000,000 as a separate line", "—"],
+            ["Consolidated SFP at 31 Dec 20X8: Copperfield's assets and liabilities are NOT included — from the disposal date the group has no residual interest, so Copperfield is completely deconsolidated", "—"],
+            ["Cash proceeds of 38,000,000 are included within consolidated cash as normal (or as a receivable if not yet received)", "—"],
+            ["Non-controlling interest: the 4,500,000 NCI balance is derecognised in full — it no longer appears in the consolidated SFP", "—"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Derecognise Copperfield's net assets at disposal date", marks: 3 },
+      { point: "Derecognise unimpaired goodwill at disposal date", marks: 3 },
+      { point: "Correct disposal formula: proceeds less (net assets + goodwill) plus NCI derecognised", marks: 5 },
+      { point: "Correct treatment/reasoning for adding back NCI", marks: 3 },
+      { point: "Line-by-line consolidation of Copperfield's results up to disposal date in the SPL", marks: 3 },
+      { point: "Gain on disposal recognised as a separate line in the SPL", marks: 2 },
+      { point: "Correct conclusion that Copperfield's SFP items are fully excluded at year end", marks: 3 },
+      { point: "NCI derecognised in full from the consolidated SFP", marks: 2 },
+      { point: "Presentation and clarity", marks: 1 },
+    ],
+    tricks: [
+      "The most-forgotten step in a full disposal is adding back the NCI's share of net assets in the disposal calculation — without it, the gain/loss appears to relate to 100% of the subsidiary, when the parent group only ever owned and is only giving up its 85% interest for the proceeds received.",
+      "A full mid-year disposal still requires the subsidiary's results to be consolidated line-by-line in the SPL for the period the group controlled it (here, 9 months) — the subsidiary isn't simply excluded from the SPL just because it's excluded from the year-end SFP.",
+      "Do not confuse a full disposal (control lost entirely, subsidiary fully deconsolidated, gain/loss recognised in full) with a partial disposal that RETAINS control (treated as an equity transaction between owners, with no gain/loss in profit or loss at all — only a transfer within equity) — the two have completely different accounting and are a favourite way DipIFR distinguishes strong candidates from weak ones.",
+    ],
+  },
+  {
+    id: "sfp-08", part: "SFP", difficulty: "Hard", marks: 25, time: 49,
+    title: "Steadfast steps up from a 25% associate to a 60% subsidiary of Larkspur — step acquisition with remeasurement gain",
+    tags: ["Step acquisition", "Remeasurement gain", "Goodwill", "Associate to subsidiary"],
+    scenario: [
+      "Steadfast Co has held 25% of the equity shares of Larkspur Co for several years, accounted for as an associate. The equity-accounted carrying amount of this holding was $14,000,000 immediately before the transaction below.",
+      "On 1 July 20X9, Steadfast acquired a further 35% of Larkspur's equity shares for cash of $23,000,000, taking its total holding to 60% and giving it control. The fair value of Steadfast's original 25% holding at this date was $16,500,000.",
+      "At 1 July 20X9 (the date control was obtained), Larkspur's identifiable net assets had a fair value of $58,000,000. The fair value of the non-controlling interest (40%) at that date was $21,000,000.",
+    ],
+    requirement: "Calculate the goodwill arising on the step acquisition and the gain or loss to be recognised on the remeasurement of Steadfast's original holding.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Remeasurement of the original 25% holding to fair value",
+          rows: [
+            ["Fair value of original 25% holding at 1 July 20X9 (date control obtained)", "16,500,000"],
+            ["Less: equity-accounted carrying amount immediately before", "(14,000,000)"],
+            ["Remeasurement gain, recognised in profit or loss", "2,500,000"],
+          ],
+          note: "IFRS 3 treats a step acquisition to control as if the previously held interest is disposed of at fair value and immediately reacquired at that same fair value as part of the new combination. The gain (or loss) on this notional disposal is recognised in the consolidated profit or loss for the period — it does NOT go through other comprehensive income or straight to equity.",
+        },
+        {
+          heading: "W2 — Total consideration for goodwill purposes",
+          rows: [
+            ["Cash paid for the further 35% interest", "23,000,000"],
+            ["Fair value of the previously held 25% interest at the acquisition date", "16,500,000"],
+            ["Fair value of NCI at acquisition date (40%)", "21,000,000"],
+            ["Total 'consideration' for the goodwill calculation", "60,500,000"],
+          ],
+        },
+        {
+          heading: "W3 — Goodwill on acquisition",
+          rows: [
+            ["Total per W2", "60,500,000"],
+            ["Less: fair value of identifiable net assets at acquisition date", "(58,000,000)"],
+            ["Goodwill arising", "2,500,000"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Recognise the transaction as a step acquisition achieved in stages", marks: 3 },
+      { point: "Remeasure the previously held interest to its acquisition-date fair value", marks: 4 },
+      { point: "Recognise the remeasurement gain/loss in profit or loss (not OCI/equity)", marks: 4 },
+      { point: "Include fair value of the previously held interest within total consideration for goodwill", marks: 3 },
+      { point: "Include cash paid for the additional interest", marks: 2 },
+      { point: "Include fair value of NCI at the date control is obtained", marks: 2 },
+      { point: "Goodwill correctly computed as a single amount at the date control passes", marks: 4 },
+      { point: "Presentation and workings clarity", marks: 3 },
+    ],
+    tricks: [
+      "The step-acquisition remeasurement gain is one of the highest-value 'trick' adjustments in the whole syllabus: candidates who simply add the original cost of the 25% stake to the new cash paid, instead of remeasuring the ORIGINAL stake to fair value at the date control is obtained, misstate both the goodwill and miss a P/L gain entirely.",
+      "Goodwill on a step acquisition is calculated ONCE, at the date control is obtained, using the SUM of (i) fair value of any previously held interest, (ii) fair value/cash of the new consideration transferred, and (iii) fair value of NCI — never as a series of separate 'goodwill on tranche 1' and 'goodwill on tranche 2' calculations.",
+      "This must not be confused with a step acquisition that does NOT obtain control (e.g. increasing from 10% to 20%, still no significant influence, still a financial asset) — only a change in the LEVEL OF INFLUENCE (to control, or from none to significant influence) triggers remeasurement to fair value through profit or loss. An increase in stake WITHIN an existing control relationship (e.g. 60% to 75%, control retained throughout) is instead treated as a transaction between owners in equity, with no gain or loss in profit or loss at all.",
+    ],
+  },
+  {
+    id: "sfp-09", part: "SFP", difficulty: "Hard", marks: 25, time: 49,
+    title: "Marchbanks acquires Ottoline — redeemable preference shares held by NCI",
+    tags: ["Preference shares", "NCI complexities", "Financial liability classification"],
+    scenario: [
+      "Marchbanks Co acquired 80% of the ordinary shares of Ottoline Co on 1 January 20X7 for $40,000,000. Ottoline's equity at acquisition comprised ordinary share capital of $20,000,000 and retained earnings of $18,000,000.",
+      "Ottoline also has in issue $6,000,000 of 6% redeemable preference shares, all of which are held by parties OUTSIDE the group and are mandatorily redeemable at par in 20Y2. These were in issue both at acquisition and at the reporting date.",
+      "Fair value of the (ordinary share) NCI at acquisition was $9,500,000. Ottoline's retained earnings at 31 December 20X7 were $22,000,000 (after charging the preference dividend as a finance cost, correctly, in arriving at this figure).",
+    ],
+    requirement: "Explain the classification of the redeemable preference shares and calculate goodwill and the non-controlling interest at 31 December 20X7.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Classification of the redeemable preference shares",
+          rows: [
+            ["Mandatorily redeemable preference shares represent a contractual obligation to deliver cash and are classified as a FINANCIAL LIABILITY under IAS 32/IFRS 9, not as equity, regardless of their legal form as 'shares'", "—"],
+            ["Because they are a liability, the preference dividend is a FINANCE COST in profit or loss (already reflected correctly per the question), and the preference shares themselves are excluded entirely from 'net assets' for consolidation purposes — they simply remain a liability in the consolidated SFP", "—"],
+            ["Crucially, preference shareholders holding a LIABILITY instrument are NOT non-controlling interest — NCI only ever relates to EQUITY instruments (here, the 20% of ordinary shares Marchbanks does not own)", "—"],
+          ],
+        },
+        {
+          heading: "W2 — Net assets of Ottoline for consolidation (ordinary equity only)",
+          rows: [
+            ["", "At acquisition", "At reporting date"],
+            ["Ordinary share capital", "20,000,000", "20,000,000"],
+            ["Retained earnings", "18,000,000", "22,000,000"],
+            ["Net assets (ordinary equity)", "38,000,000", "42,000,000"],
+          ],
+          isTable: true,
+          note: "The preference shares are excluded from this table entirely — they continue to sit as a liability of 6,000,000 (plus any accrued unpaid dividend) both before and after consolidation, unaffected by the ownership change.",
+        },
+        {
+          heading: "W3 — Goodwill",
+          rows: [
+            ["Consideration transferred", "40,000,000"],
+            ["Fair value of NCI at acquisition (ordinary shares only)", "9,500,000"],
+            ["Less: net assets at acquisition (ordinary equity, W2)", "(38,000,000)"],
+            ["Goodwill on acquisition", "11,500,000"],
+          ],
+        },
+        {
+          heading: "W4 — NCI at 31 December 20X7 (fair value method)",
+          rows: [
+            ["NCI at acquisition", "9,500,000"],
+            ["NCI% x post-acq movement in ordinary net assets: 20% x (42,000,000 − 38,000,000)", "800,000"],
+            ["NCI at 31 December 20X7", "10,300,000"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Correctly classify redeemable preference shares as a financial liability", marks: 5 },
+      { point: "Explain preference dividend is a finance cost, not a distribution of profit", marks: 3 },
+      { point: "Recognise preference shareholders are not NCI (NCI is only equity)", marks: 4 },
+      { point: "Exclude preference shares from the net assets working entirely", marks: 3 },
+      { point: "Correct net assets table using only ordinary share capital and reserves", marks: 3 },
+      { point: "Goodwill calculation using ordinary-share NCI fair value only", marks: 3 },
+      { point: "NCI roll-forward using ordinary equity movement only", marks: 3 },
+      { point: "Presentation and clarity", marks: 1 },
+    ],
+    tricks: [
+      "This question tests whether candidates understand that legal form ('preference SHARES') does not determine accounting classification — substance governs. A mandatory redemption obligation makes the instrument a liability under IAS 32, full stop, regardless of what it is called.",
+      "Because the preference shares are a liability, holders of them are never non-controlling interest, even though they are 'outside the group' — NCI is strictly the equity interest in a subsidiary not attributable to the parent. Conflating outside preference-share holders with NCI is a very common and costly error.",
+      "Watch for the preference dividend being incorrectly added back to retained earnings as if it were a distribution of profit rather than a finance cost already properly deducted in arriving at profit — the question here deliberately confirms it has already been correctly treated, but many exam variants require the CANDIDATE to make this reclassification themselves.",
+    ],
+  },
+  {
+    id: "sfp-10", part: "SFP", difficulty: "Medium", marks: 25, time: 49,
+    title: "Kestrel sells a warehouse to its subsidiary Falworth — unrealised profit on intra-group non-current asset transfer",
+    tags: ["PUP on non-current asset", "Excess depreciation", "Downstream sale"],
+    scenario: [
+      "Kestrel Co owns 75% of Falworth Co. On 1 January 20X6, Kestrel sold a warehouse to Falworth for $9,000,000. The warehouse had a carrying amount in Kestrel's own books of $6,000,000 at the date of sale, and a remaining useful life of 15 years at that date (straight-line depreciation, no residual value). Falworth depreciates the warehouse over the same remaining useful life.",
+      "The reporting date is 31 December 20X7 (i.e. two years after the intra-group sale).",
+    ],
+    requirement: "Calculate the consolidation adjustment required in respect of the intra-group transfer of the warehouse at 31 December 20X7.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Unrealised profit at the date of transfer",
+          rows: [
+            ["Sale price", "9,000,000"],
+            ["Carrying amount at date of sale (group cost)", "(6,000,000)"],
+            ["Unrealised profit on intra-group sale", "3,000,000"],
+          ],
+        },
+        {
+          heading: "W2 — Excess depreciation charged by Falworth since the transfer",
+          rows: [
+            ["Falworth's depreciation based on transfer price: 9,000,000/15 yrs", "600,000 p.a."],
+            ["Depreciation that would have been charged on original group cost: 6,000,000/15 yrs", "400,000 p.a."],
+            ["Excess depreciation per annum", "200,000 p.a."],
+            ["Excess depreciation for 2 years (20X6 and 20X7)", "400,000"],
+          ],
+          note: "The excess depreciation is a REALISATION of part of the unrealised profit each year — as Falworth 'uses up' the asset, the group recognises that a corresponding slice of the previously unrealised gain has, in effect, been earned through use.",
+        },
+        {
+          heading: "W3 — Unrealised profit remaining at 31 December 20X7",
+          rows: [
+            ["Original unrealised profit (W1)", "3,000,000"],
+            ["Less: cumulative excess depreciation realised (W2)", "(400,000)"],
+            ["Unrealised profit remaining at 31 December 20X7", "2,600,000"],
+          ],
+        },
+        {
+          heading: "W4 — Consolidation adjustments at 31 December 20X7",
+          rows: [
+            ["Reduce non-current assets (warehouse): Dr Retained earnings 2,600,000 / Cr Property, plant and equipment 2,600,000", "—"],
+            ["Since this is a downstream sale (parent selling to subsidiary), the FULL unrealised profit adjustment reduces only the PARENT's (Kestrel's) own retained earnings — there is no NCI impact at all", "—"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Calculate unrealised profit at the date of transfer", marks: 3 },
+      { point: "Recalculate depreciation on the group's original cost", marks: 3 },
+      { point: "Recalculate depreciation actually charged on the transfer price", marks: 2 },
+      { point: "Calculate annual excess depreciation", marks: 3 },
+      { point: "Accumulate excess depreciation over the correct number of years (2)", marks: 3 },
+      { point: "Net down the unrealised profit by cumulative excess depreciation", marks: 4 },
+      { point: "Reduce PPE by the net unrealised profit remaining", marks: 3 },
+      { point: "Correctly identify this as downstream, adjusting only parent's retained earnings, no NCI impact", marks: 3 },
+      { point: "Presentation", marks: 1 },
+    ],
+    tricks: [
+      "Unrealised profit on an intra-group non-current asset transfer does not simply sit static — it is gradually realised through the excess depreciation the BUYING entity charges (because it is depreciating an artificially inflated cost). Every year that passes after the transfer, part of the profit becomes 'realised' and the PUP adjustment shrinks.",
+      "Do not forget to accumulate the excess depreciation for EVERY year since the transfer, not just the current year — a two-year-old transfer needs two years of excess depreciation netted off, a common source of lost marks when questions run for several years after the intra-group sale.",
+      "Downstream vs upstream drives whether NCI shares in the adjustment: here Kestrel (parent) sold to Falworth (subsidiary) — downstream — so the whole PUP net of excess depreciation hits the PARENT's retained earnings only. If Falworth (sub) had sold to Kestrel (parent) instead — upstream — the adjustment would sit inside Falworth's net assets and be split between parent and NCI in the usual ownership proportions.",
+    ],
+  },
+  {
+    id: "sfp-11", part: "SFP", difficulty: "Hard", marks: 25, time: 49,
+    title: "Thornbury acquires Vellacott — consideration includes convertible loan notes and a contingent share issue",
+    tags: ["Convertible loan notes as consideration", "Contingent share consideration", "Goodwill"],
+    scenario: [
+      "Thornbury Co acquired 100% of Vellacott Co on 1 April 20X8. Consideration comprised: $18,000,000 cash; the issue of 2,000,000 convertible loan notes with a fair value of $12,000,000 at the acquisition date; and an obligation to issue further ordinary shares to Vellacott's former owners in 2 years' time if Vellacott's earnings exceed a specified target — the number of shares to be issued is fixed, contingent only on performance, with an acquisition-date fair value of $3,500,000.",
+      "Vellacott's identifiable net assets at acquisition had a fair value of $27,000,000.",
+    ],
+    requirement: "Calculate goodwill on acquisition, explaining the classification of each element of consideration.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Classification of consideration elements",
+          rows: [
+            ["Cash: straightforward monetary consideration, included at face value", "18,000,000"],
+            ["Convertible loan notes issued to former owners: a debt instrument issued by the ACQUIRER as consideration — included in goodwill at its acquisition-date fair value (NOT face/nominal value); the loan notes themselves are then recognised as a financial liability of the group going forward, split between liability and equity (conversion option) components per IAS 32 in the acquirer's own books, but for the GOODWILL calculation only the total consideration fair value matters", "12,000,000"],
+            ["Contingent share consideration: a fixed number of shares contingent on performance is still consideration transferred at acquisition-date fair value; because it will be settled in the ACQUIRER's own equity instruments (a fixed number of shares) it is classified as an EQUITY instrument of the acquirer, and is NOT subsequently remeasured — it stays at the acquisition-date fair value forever", "3,500,000"],
+          ],
+        },
+        {
+          heading: "W2 — Total consideration transferred",
+          rows: [
+            ["Cash", "18,000,000"],
+            ["Convertible loan notes at fair value", "12,000,000"],
+            ["Contingent share consideration at fair value (equity-classified, fixed number of shares)", "3,500,000"],
+            ["Total consideration transferred", "33,500,000"],
+          ],
+        },
+        {
+          heading: "W3 — Goodwill",
+          rows: [
+            ["Total consideration (W2)", "33,500,000"],
+            ["NCI at acquisition (100% acquired — nil)", "-"],
+            ["Less: fair value of identifiable net assets at acquisition", "(27,000,000)"],
+            ["Goodwill on acquisition", "9,500,000"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Include cash consideration at face value", marks: 1 },
+      { point: "Include loan notes at acquisition-date fair value, not face value", marks: 4 },
+      { point: "Explain the loan notes are a liability of the group post-acquisition", marks: 2 },
+      { point: "Recognise contingent share consideration is still consideration transferred at fair value", marks: 4 },
+      { point: "Correctly classify contingent share consideration as equity because settled in a fixed number of the acquirer's own shares", marks: 4 },
+      { point: "Explain equity-classified consideration is never subsequently remeasured", marks: 3 },
+      { point: "Total consideration correctly summed", marks: 2 },
+      { point: "Goodwill correctly calculated with nil NCI (100% acquisition)", marks: 3 },
+      { point: "Presentation and workings clarity", marks: 2 },
+    ],
+    tricks: [
+      "The IFRS 3 classification test for contingent consideration is: will it be settled in cash/other assets (a liability, subsequently remeasured through profit or loss each period) or in a FIXED number of the acquirer's own equity instruments (equity, never subsequently remeasured)? Here, a fixed number of shares makes it equity — if instead the NUMBER of shares varied to deliver a fixed VALUE, it would be a liability instead, because a variable number of shares to deliver fixed value fails the 'fixed for fixed' equity test under IAS 32.",
+      "Loan notes or other debt instruments issued as consideration are measured at their acquisition-date FAIR VALUE for the purposes of the goodwill calculation, never at face/nominal value — candidates who use the $20,000,000 nominal value of loan notes (if given) instead of fair value materially misstate goodwill.",
+      "Whatever their goodwill treatment, loan notes issued as consideration remain a real financial liability of the acquirer going forward and continue to be accounted for under IFRS 9/IAS 32 in the post-combination financial statements (including being split between liability and equity components if genuinely convertible) — this is entirely separate from, and doesn't reopen, the goodwill calculation.",
+    ],
+  },
+  {
+    id: "sfp-12", part: "SFP", difficulty: "Medium", marks: 25, time: 49,
+    title: "Wrenfield acquires Osgood — allocating a goodwill impairment loss between parent and NCI (fair value method)",
+    tags: ["Goodwill impairment", "NCI allocation", "Fair value method"],
+    scenario: [
+      "Wrenfield Co acquired 70% of Osgood Co some years ago. Goodwill at acquisition, calculated using the fair value method for NCI, was $15,000,000 (comprising notional goodwill attributable to the parent of $10,500,000 and notional goodwill attributable to NCI of $4,500,000, in the same 70:30 proportion as the ownership interest — this can arise coincidentally or be separately evidenced).",
+      "At the current reporting date, an impairment review of the cash-generating unit containing Osgood's goodwill identifies a total impairment loss of $6,000,000.",
+    ],
+    requirement: "Explain how the goodwill impairment loss is allocated between the parent and the non-controlling interest, and state the double entry.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Allocation of the impairment loss",
+          rows: [
+            ["Total impairment loss identified", "6,000,000"],
+            ["Attributable to parent: 70% x 6,000,000", "4,200,000"],
+            ["Attributable to NCI: 30% x 6,000,000", "1,800,000"],
+          ],
+          note: "Under the fair value method, goodwill is recognised in full (parent's share PLUS NCI's notional share), so any impairment of that full goodwill balance is also shared between parent and NCI in their ownership proportions — because NCI's own portion of goodwill genuinely sits on the consolidated SFP and is capable of being impaired just like the parent's portion.",
+        },
+        {
+          heading: "W2 — Double entry",
+          rows: [
+            ["Dr Impairment loss (P/L) 6,000,000", "—"],
+            ["Cr Goodwill 6,000,000", "—"],
+            ["Presentation: consolidated retained earnings absorb 4,200,000 (parent's share); NCI in the consolidated SFP is reduced by 1,800,000 (its share)", "—"],
+          ],
+        },
+        {
+          heading: "W3 — Contrast: proportionate share method (for illustration only — not the method used here)",
+          rows: [
+            ["If NCI had instead been measured at its proportionate share of net assets (not fair value) at acquisition, only the PARENT's share of goodwill (10,500,000-equivalent) would ever have been recognised on the consolidated SFP", "—"],
+            ["In that case, the FULL impairment loss identified for the cash-generating unit would need to be 'grossed up' before allocation, or — more commonly examined — the impairment is simply charged 100% against the parent's retained earnings, with NO NCI allocation, because NCI's unrecognised notional goodwill was never on the statement of financial position to begin with", "—"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Recognise fair value method means gross goodwill (both parent and NCI shares) is recognised", marks: 3 },
+      { point: "Allocate impairment loss 70:30 (or given ownership ratio) between parent and NCI", marks: 5 },
+      { point: "Correct double entry through profit or loss to goodwill", marks: 3 },
+      { point: "Correct presentation: NCI in the consolidated SFP reduced by its share", marks: 3 },
+      { point: "Correct presentation: consolidated retained earnings reduced by parent's share", marks: 3 },
+      { point: "Explain contrast with proportionate share method (no NCI allocation in that method)", marks: 6 },
+      { point: "Clarity of explanation", marks: 2 },
+    ],
+    tricks: [
+      "This is fundamentally a test of whether the candidate understands WHY the NCI measurement method chosen at acquisition (fair value vs proportionate share) has consequences for every subsequent year: fair value method recognises 100% of goodwill (parent + NCI), so impairments are shared; proportionate share method recognises only the parent's portion of goodwill, so impairments generally fall wholly on the parent.",
+      "A frequent examiner comment is that candidates allocate impairment on the NCI's OWNERSHIP percentage without first checking which NCI measurement method was used at acquisition — always look for the phrase 'fair value of NCI' (fair value method, gross goodwill, shared impairment) versus 'NCI's proportionate share of identifiable net assets' (partial goodwill, impairment usually all to parent).",
+      "The double entry always debits profit or loss and credits goodwill directly — goodwill impairment is never reversed in a later period even if the recoverable amount subsequently recovers (unlike some other assets under IAS 36).",
+    ],
+  },
+  {
+    id: "sfp-13", part: "SFP", difficulty: "Medium", marks: 25, time: 49,
+    title: "Corvette acquires Bellweather at a bargain price — negative goodwill (gain on a bargain purchase)",
+    tags: ["Bargain purchase", "Negative goodwill", "Reassessment"],
+    scenario: [
+      "Corvette Co acquired 100% of Bellweather Co on 1 July 20X9 for cash of $18,000,000. Bellweather's identifiable net assets at acquisition, after a thorough reassessment of all assets, liabilities and contingent liabilities acquired, had a fair value of $23,000,000. Bellweather's former shareholders were a distressed seller facing regulatory pressure to divest.",
+    ],
+    requirement: "Calculate the amount to be recognised on acquisition and explain how it should be presented.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Goodwill calculation",
+          rows: [
+            ["Consideration transferred", "18,000,000"],
+            ["NCI at acquisition (100% acquired — nil)", "-"],
+            ["Less: fair value of identifiable net assets at acquisition", "(23,000,000)"],
+            ["Result: negative goodwill (a 'bargain purchase')", "(5,000,000)"],
+          ],
+        },
+        {
+          heading: "W2 — Required reassessment before recognising a gain",
+          rows: [
+            ["Before recognising a bargain purchase gain, IFRS 3 requires the acquirer to REASSESS whether it has correctly identified ALL of the assets acquired and liabilities assumed, and to review the procedures used to measure the amounts to be recognised at the acquisition date", "—"],
+            ["The scenario states this reassessment has already been performed ('after a thorough reassessment'), so the (5,000,000) negative figure is confirmed as a genuine bargain purchase, not a measurement error", "—"],
+          ],
+        },
+        {
+          heading: "W3 — Recognition and presentation",
+          rows: [
+            ["The gain on the bargain purchase of 5,000,000 is recognised IMMEDIATELY in profit or loss at the acquisition date — it is not deferred, not spread over future periods, and not recorded as negative goodwill on the SFP", "—"],
+            ["No 'negative goodwill' asset or contra-asset appears anywhere in the consolidated statement of financial position — the goodwill line is simply nil, and the gain flows through consolidated retained earnings via the SPL", "—"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Calculate that the transaction results in negative goodwill", marks: 4 },
+      { point: "Explain the mandatory reassessment requirement under IFRS 3 before recognising a gain", marks: 6 },
+      { point: "Confirm reassessment has been performed per the scenario", marks: 2 },
+      { point: "Recognise the gain immediately in profit or loss at the acquisition date", marks: 5 },
+      { point: "State that no negative goodwill balance is carried on the SFP", marks: 4 },
+      { point: "Explain effect flows through to consolidated retained earnings", marks: 2 },
+      { point: "Presentation and clarity", marks: 2 },
+    ],
+    tricks: [
+      "A bargain purchase gain must NEVER be recognised without first performing (and, in an exam answer, explicitly STATING) the mandatory reassessment of all identifiable assets, liabilities and contingent liabilities, and of the measurement procedures used — omitting this discussion, even when the numbers are given cleanly, loses significant marks in a discursive-style question because DipIFR tests understanding of the STANDARD, not just arithmetic.",
+      "The gain is recognised immediately and in FULL in profit or loss at the acquisition date — it is not amortised, deferred, or smoothed over future periods, and no asset or liability for 'negative goodwill' is ever presented on the face of the consolidated SFP.",
+      "A distressed or forced sale (as hinted by 'regulatory pressure to divest') is a classic scenario indicator DipIFR uses to signal a genuine bargain purchase is plausible, rather than simply an error in measuring consideration or net assets — but the accounting conclusion still requires the explicit reassessment step regardless of how plausible the story sounds.",
+    ],
+  },
+  {
+    id: "sfp-14", part: "SFP", difficulty: "Hard", marks: 25, time: 49,
+    title: "Blackthorn acquires Fenwick — combined question: FV uplift on building, upstream PUP, intra-group balance, proposed dividend",
+    tags: ["Multiple adjustments", "FV uplift", "PUP", "Proposed dividend", "Comprehensive"],
+    scenario: [
+      "Blackthorn Co acquired 80% of Fenwick Co on 1 January 20X9 for $60,000,000 cash, when Fenwick's net assets were $55,000,000 (including retained earnings of $38,000,000). Fair value of NCI at acquisition was $13,000,000.",
+      "At acquisition, a building held by Fenwick had a fair value $8,000,000 above its carrying amount, with a remaining useful life of 20 years.",
+      "During 20X9, Fenwick sold goods to Blackthorn for $4,000,000 at a mark-up on cost of 25%. Three-quarters of these goods remained in Blackthorn's inventory at 31 December 20X9.",
+      "At 31 December 20X9, Blackthorn's receivables included $2,200,000 due from Fenwick, agreeing to Fenwick's payables.",
+      "Fenwick proposed a dividend of $3,000,000 shortly before the year end, which had not been paid or recorded by either company at 31 December 20X9 and is not reflected in Fenwick's net assets below.",
+      "Fenwick's net assets at 31 December 20X9 (before adjusting for the proposed dividend) were $63,000,000. No impairment of goodwill has arisen.",
+    ],
+    requirement: "Calculate goodwill at acquisition, and NCI and consolidated retained earnings at 31 December 20X9.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Fair value adjustment (building)",
+          rows: [
+            ["FV uplift at acquisition", "8,000,000"],
+            ["Additional depreciation: 8,000,000/20 yrs x 12/12", "(400,000)"],
+            ["FV uplift carried at 31 Dec 20X9", "7,600,000"],
+          ],
+        },
+        {
+          heading: "W2 — Unrealised profit on intra-group inventory (upstream — Fenwick is seller)",
+          rows: [
+            ["Goods remaining in inventory: 75% x 4,000,000", "3,000,000"],
+            ["Mark-up on cost of 25% means profit fraction = 25/125 of selling price", "20%"],
+            ["Unrealised profit: 3,000,000 x 20%", "600,000"],
+          ],
+          note: "Mark-up on COST means the 25% is applied to cost, so profit = 25% x cost, and selling price = 125% x cost — profit as a fraction of selling price is therefore 25/125 = 20%, NOT 25%. This mark-up vs margin distinction is deliberately tested here.",
+        },
+        {
+          heading: "W3 — Net assets of Fenwick",
+          rows: [
+            ["", "At acquisition", "At reporting date"],
+            ["Net assets per question", "55,000,000", "63,000,000"],
+            ["FV adjustment on building (W1)", "8,000,000", "7,600,000"],
+            ["Less: unrealised profit on inventory (upstream, W2)", "-", "(600,000)"],
+            ["Less: proposed dividend not yet reflected", "-", "(3,000,000)"],
+            ["Adjusted net assets", "63,000,000", "67,000,000"],
+          ],
+          isTable: true,
+          note: "The proposed dividend reduces Fenwick's net assets because, once declared/proposed as a liability under the applicable recognition criteria, it represents a distribution that will leave the entity — for consolidation, it must be reflected before splitting net assets between parent and NCI, and the corresponding receivable (Blackthorn's 80% share) is eliminated against the intra-group balance.",
+        },
+        {
+          heading: "W4 — Goodwill",
+          rows: [
+            ["Consideration transferred", "60,000,000"],
+            ["Fair value of NCI at acquisition", "13,000,000"],
+            ["Less: net assets at acquisition (W3)", "(63,000,000)"],
+            ["Goodwill on acquisition", "10,000,000"],
+          ],
+        },
+        {
+          heading: "W5 — NCI at 31 December 20X9 (fair value method)",
+          rows: [
+            ["NCI at acquisition", "13,000,000"],
+            ["NCI% x post-acq movement: 20% x (67,000,000 − 63,000,000)", "800,000"],
+            ["NCI at 31 December 20X9", "13,800,000"],
+          ],
+        },
+        {
+          heading: "W6 — Consolidated retained earnings",
+          rows: [
+            ["Parent's share of post-acq movement: 80% x 4,000,000", "3,200,000"],
+            ["Add to Blackthorn's own retained earnings (assumed to already exclude any dividend income recorded from Fenwick's proposed dividend, which would also need reversing if recorded)", "3,200,000"],
+          ],
+        },
+        {
+          heading: "W7 — Intra-group balance and dividend receivable elimination",
+          rows: [
+            ["Trade balance: Dr Payables (Fenwick) 2,200,000 / Cr Receivables (Blackthorn) 2,200,000 — eliminated in full, balances already agree", "—"],
+            ["Dividend receivable/payable: 80% x 3,000,000 = 2,400,000 eliminated between Blackthorn's dividend receivable and Fenwick's dividend payable, if recorded; the 20% (600,000) NCI share of the proposed dividend remains as a payable to NCI shareholders outside the group", "—"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "FV uplift on building calculated and depreciated over remaining life", marks: 3 },
+      { point: "Correctly identify upstream nature of inventory sale (Fenwick is seller)", marks: 2 },
+      { point: "Correct mark-up on cost conversion to profit-on-sales fraction (25/125)", marks: 3 },
+      { point: "PUP calculated on inventory remaining (75% x 4,000,000)", marks: 2 },
+      { point: "Proposed dividend correctly deducted from Fenwick's net assets", marks: 3 },
+      { point: "Net assets table at acquisition and reporting date, all adjustments included", marks: 3 },
+      { point: "Goodwill calculation", marks: 2 },
+      { point: "NCI roll-forward using fair value method", marks: 3 },
+      { point: "Consolidated retained earnings — parent's share of adjusted movement", marks: 2 },
+      { point: "Intra-group trade balance elimination (balances already agree — no cash/goods in transit needed)", marks: 1 },
+      { point: "Correct treatment of the proposed dividend receivable/payable split between group and NCI", marks: 1 },
+    ],
+    tricks: [
+      "This question stacks several classic traps deliberately: (1) mark-up vs margin (25/125 not 25%), (2) upstream vs downstream (Fenwick is the subsidiary/seller, so NCI shares in the unrealised profit reversal), (3) a proposed dividend that must reduce net assets before the NCI/parent split, and (4) an intra-group balance that already agrees so needs NO cash/goods-in-transit adjustment — a deliberate contrast to test whether candidates over-engineer a reconciliation that isn't needed.",
+      "A proposed (but unpaid, unrecorded) dividend from a subsidiary must still be reflected in the CONSOLIDATION workings so that NCI's share of it is properly separated from the group's share — even though neither company's own financial statements have recorded it yet, because dividends proposed before the year end but not yet a liability under the entity's own policies are often still required to be reflected for consolidation adjustment purposes in DipIFR-style scenarios (always follow the specific facts given).",
+      "When several adjustments hit the SAME net assets working (FV uplift, PUP, dividend), build them into ONE clean net-assets table at acquisition and at the reporting date rather than trying to adjust goodwill and NCI separately for each item — this is both faster and dramatically reduces arithmetic errors under exam time pressure.",
+    ],
+  },
+  {
+    id: "sfp-15", part: "SFP", difficulty: "Easy", marks: 25, time: 49,
+    title: "Harrowgate acquires Linden — comparing goodwill and NCI under the two permitted measurement bases",
+    tags: ["NCI measurement choice", "Fair value vs proportionate share", "Goodwill comparison"],
+    scenario: [
+      "Harrowgate Co acquired 65% of Linden Co on 1 January 20X8 for $28,000,000 cash, when Linden's identifiable net assets had a fair value of $35,000,000. The fair value of the 35% non-controlling interest at acquisition, based on the quoted market price of Linden's shares not held by Harrowgate, was $11,000,000.",
+    ],
+    requirement: "Calculate goodwill on acquisition (a) if NCI is measured at fair value, and (b) if NCI is measured at its proportionate share of Linden's identifiable net assets. Explain why the two methods give different results and the effect on future impairment reviews.",
+    solution: {
+      workings: [
+        {
+          heading: "W1(a) — Goodwill: NCI measured at fair value (the 'full goodwill' method)",
+          rows: [
+            ["Consideration transferred", "28,000,000"],
+            ["Fair value of NCI at acquisition", "11,000,000"],
+            ["Less: fair value of identifiable net assets acquired", "(35,000,000)"],
+            ["Goodwill (full goodwill method)", "4,000,000"],
+          ],
+        },
+        {
+          heading: "W1(b) — Goodwill: NCI measured at proportionate share of net assets (the 'partial goodwill' method)",
+          rows: [
+            ["Consideration transferred", "28,000,000"],
+            ["NCI at proportionate share: 35% x 35,000,000", "12,250,000"],
+            ["Less: fair value of identifiable net assets acquired", "(35,000,000)"],
+            ["Goodwill (partial goodwill method)", "5,250,000"],
+          ],
+        },
+        {
+          heading: "W2 — Explaining the 1,250,000 difference",
+          rows: [
+            ["Difference between NCI at fair value and NCI at proportionate share: 12,250,000 − 11,000,000", "1,250,000"],
+            ["This 1,250,000 represents the NCI's implied share of goodwill — because the fair value method recognises 100% of goodwill including the portion attributable to NCI, while the proportionate share method recognises ONLY the parent's own share of goodwill, deliberately EXCLUDING any goodwill attributable to NCI", "—"],
+          ],
+          note: "Here the NCI's fair value of $11,000,000 is actually LOWER than its 35% share of net assets ($12,250,000), implying the NCI shareholders have paid a premium below asset value per share for their stake relative to what Harrowgate paid — this happens in practice (e.g. lack of control/minority discount reflected in a quoted share price) and is precisely why the full goodwill figure (4,000,000) can come out LOWER than the partial goodwill figure (5,250,000), the reverse of the 'usual' intuition that full goodwill is always the bigger number.",
+        },
+        {
+          heading: "W3 — Effect on future impairment reviews",
+          rows: [
+            ["Under the fair value method: 100% of goodwill sits on the consolidated SFP, so any future impairment is shared between parent (65%) and NCI (35%)", "—"],
+            ["Under the proportionate share method: only the parent's implicit share of goodwill sits on the consolidated SFP, so for impairment testing purposes the recoverable amount of the CGU must be compared against a 'grossed-up' carrying amount of goodwill (or, more simply as usually examined, any impairment identified is allocated wholly to the parent since NCI's goodwill was never recognised)", "—"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Goodwill under fair value method correctly calculated", marks: 4 },
+      { point: "Goodwill under proportionate share method correctly calculated", marks: 4 },
+      { point: "Explain the two methods represent 'full' vs 'partial' goodwill recognition", marks: 4 },
+      { point: "Identify and quantify the 1,250,000 difference as NCI's implicit goodwill", marks: 3 },
+      { point: "Explain (rather than assume) why full goodwill can be lower than partial goodwill here", marks: 4 },
+      { point: "Explain impact on future impairment allocation between parent and NCI", marks: 4 },
+      { point: "Clarity and structure of explanation", marks: 2 },
+    ],
+    tricks: [
+      "Candidates often assume the fair value method ALWAYS produces a bigger goodwill figure than the proportionate share method — this is usually true (because NCI's fair value per share often exceeds its pro-rata share of net asset value, reflecting synergies), but it is not guaranteed, as this scenario deliberately demonstrates. Always calculate both figures directly from the facts given rather than assuming a relationship.",
+      "The choice between the two methods is made ONCE, on an ACQUISITION-BY-ACQUISITION basis (i.e. a group can use fair value for one subsidiary and proportionate share for another) — but once elected for a specific acquisition, the choice cannot be changed in later periods.",
+      "The proportionate share ('partial goodwill') method is often, in exam answers, wrongly described as meaning 'no NCI is recognised' — NCI is always recognised in full at its share of net assets under either method; what differs is only whether NCI's implicit share of GOODWILL specifically is also recognised.",
+    ],
+  },
+
+  // ---------------------------------------------------------
+  // PART B — CONSOLIDATED STATEMENT OF PROFIT OR LOSS (15)
+  // ---------------------------------------------------------
+  {
+    id: "spl-01", part: "SPL", difficulty: "Easy", marks: 25, time: 49,
+    title: "Ashcombe acquires Petrel mid-year — time-apportionment and intra-group sales elimination",
+    tags: ["Mid-year acquisition", "Time apportionment", "Intra-group sales"],
+    scenario: [
+      "Ashcombe Co acquired 75% of Petrel Co on 1 September 20X6. Both companies have a year end of 31 December 20X6. Petrel's results are assumed to accrue evenly over the year unless stated otherwise.",
+      "Petrel's revenue and cost of sales for the year ended 31 December 20X6 were $18,000,000 and $12,000,000 respectively.",
+      "During the post-acquisition period, Petrel sold goods to Ashcombe for $2,000,000; these are included in Petrel's revenue and Ashcombe's purchases/cost of sales for the full year figures. None of this inventory remained unsold at the year end.",
+    ],
+    requirement: "Calculate the consolidated revenue and cost of sales for the year ended 31 December 20X6.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Time apportionment of Petrel's results (4 months post-acquisition, 1 Sep–31 Dec)",
+          rows: [
+            ["Petrel's revenue for the year: 18,000,000 x 4/12", "6,000,000"],
+            ["Petrel's cost of sales for the year: 12,000,000 x 4/12", "4,000,000"],
+          ],
+          note: "Only the post-acquisition 4 months of Petrel's trading are added, line by line, to Ashcombe's own full-year results — Petrel's pre-acquisition results are excluded entirely from the consolidated SPL, not just from the profit split.",
+        },
+        {
+          heading: "W2 — Intra-group sales elimination",
+          rows: [
+            ["Intra-group sales occurred wholly within the post-acquisition period, so are fully included in the 6,000,000 time-apportioned revenue above", "—"],
+            ["Eliminate: Dr Revenue 2,000,000 / Cr Cost of sales 2,000,000", "—"],
+          ],
+          note: "Since none of the transferred inventory remained unsold at the year end, there is no unrealised profit to eliminate beyond the simple revenue/cost-of-sales elimination — the group's cost of sales already reflects only the cost incurred to the external party who ultimately bought the goods.",
+        },
+        {
+          heading: "W3 — Consolidated revenue and cost of sales",
+          rows: [
+            ["Consolidated revenue: Ashcombe's own revenue + 6,000,000 (Petrel time-apportioned) − 2,000,000 (intra-group elimination)", "Ashcombe + 4,000,000"],
+            ["Consolidated cost of sales: Ashcombe's own COS + 4,000,000 (Petrel time-apportioned) − 2,000,000 (intra-group elimination)", "Ashcombe + 2,000,000"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Identify 4-month post-acquisition period", marks: 2 },
+      { point: "Time-apportion Petrel's revenue correctly", marks: 3 },
+      { point: "Time-apportion Petrel's cost of sales correctly", marks: 3 },
+      { point: "Recognise only post-acquisition results are consolidated at all (not merely split for NCI)", marks: 4 },
+      { point: "Eliminate intra-group revenue against cost of sales for the full 2,000,000", marks: 4 },
+      { point: "Recognise no PUP adjustment is needed as goods were fully sold on", marks: 3 },
+      { point: "Correct final consolidated revenue figure", marks: 3 },
+      { point: "Correct final consolidated cost of sales figure", marks: 3 },
+    ],
+    tricks: [
+      "The single most common SPL error for mid-year acquisitions: candidates consolidate the SUBSIDIARY's full-year revenue and cost of sales, then try to fix things only in the NCI calculation. This is wrong — the subsidiary's PRE-acquisition trading never enters the consolidated SPL at all, at any line, because the group did not control those results.",
+      "Where a question doesn't state that trade accrued evenly, DipIFR generally expects simple time-apportionment by months/days unless seasonal or other specific information is given to justify a different split — but always check for a specific instruction overriding the straight-line assumption.",
+      "Even though this question doesn't require it, always check whether any of the intra-group goods remain unsold at the year end — if some had, a further PUP adjustment against consolidated cost of sales (and, since this is presumably Petrel selling downstream doesn't apply here — check which entity is the seller) and NCI would be required in addition to the simple revenue/COS elimination.",
+    ],
+  },
+  {
+    id: "spl-02", part: "SPL", difficulty: "Easy", marks: 25, time: 49,
+    title: "Bracknell acquires Somerlea — PUP through the SPL and NCI share of profit",
+    tags: ["PUP through SPL", "NCI share of profit", "Downstream sale"],
+    scenario: [
+      "Bracknell Co owns 70% of Somerlea Co, acquired several years ago. For the year ended 31 December 20X7: Bracknell's revenue is $50,000,000 and cost of sales $32,000,000; Somerlea's revenue is $20,000,000 and cost of sales $13,000,000.",
+      "During the year, Bracknell sold goods to Somerlea for $3,000,000 at a margin of 30% on selling price. At 31 December 20X7, 50% of these goods remained in Somerlea's inventory.",
+      "Somerlea's profit for the year (after tax), before any consolidation adjustment, was $4,200,000.",
+    ],
+    requirement: "Calculate consolidated revenue, consolidated cost of sales, and the non-controlling interest in profit for the year.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Unrealised profit on intra-group inventory",
+          rows: [
+            ["Goods remaining in Somerlea's inventory: 50% x 3,000,000", "1,500,000"],
+            ["Margin of 30% on selling price: profit = 30% x 1,500,000", "450,000"],
+          ],
+        },
+        {
+          heading: "W2 — Consolidated revenue and cost of sales",
+          rows: [
+            ["Consolidated revenue: 50,000,000 + 20,000,000 − 3,000,000 (intra-group sales)", "67,000,000"],
+            ["Consolidated cost of sales: 32,000,000 + 13,000,000 − 3,000,000 (intra-group purchases) + 450,000 (PUP add-back)", "42,450,000"],
+          ],
+          note: "The unrealised profit is ADDED BACK to cost of sales (increasing group COS / reducing group gross profit) because, from the group's perspective, the goods are still sitting in inventory at more than their true cost to the group — the 'extra' profit Bracknell recorded on the internal sale hasn't actually been earned from an external party yet.",
+        },
+        {
+          heading: "W3 — NCI share of profit for the year",
+          rows: [
+            ["This is a DOWNSTREAM sale (parent Bracknell sold to subsidiary Somerlea) — the unrealised profit sits in the PARENT's own results, not the subsidiary's, so it does NOT affect Somerlea's reported profit or the NCI calculation at all", "—"],
+            ["NCI share: 30% x 4,200,000 (Somerlea's profit, unaffected by the downstream PUP)", "1,260,000"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Calculate inventory remaining with the intra-group seller (50% x 3,000,000)", marks: 3 },
+      { point: "Correct margin (not mark-up) calculation of unrealised profit", marks: 3 },
+      { point: "Consolidated revenue eliminating full intra-group sales value", marks: 3 },
+      { point: "Consolidated cost of sales eliminating intra-group purchases", marks: 3 },
+      { point: "PUP correctly added back to consolidated cost of sales", marks: 3 },
+      { point: "Correctly identify downstream nature of the sale", marks: 4 },
+      { point: "Recognise PUP does not affect Somerlea's profit or the NCI calculation (downstream)", marks: 4 },
+      { point: "NCI share of profit correctly calculated on Somerlea's unadjusted profit", marks: 2 },
+    ],
+    tricks: [
+      "This question is the SPL-side mirror of the classic PUP trap: because Bracknell (parent) is the seller, this is DOWNSTREAM, so the unrealised profit adjustment reduces only the group's (parent's) share of profit through cost of sales — it never touches Somerlea's own reported profit, and therefore never touches the NCI calculation at all.",
+      "Contrast with an UPSTREAM sale (subsidiary selling to parent): there, the PUP adjustment would need to be deducted from SOMERLEA's profit before calculating the 30% NCI share, because the unrealised profit sits inside the subsidiary's own results.",
+      "Always eliminate the FULL intra-group sales value from both revenue and cost of sales (here, the full 3,000,000) — the PUP adjustment for unsold inventory is a SEPARATE, additional adjustment only to cost of sales, not a substitute for the full elimination.",
+    ],
+  },
+  {
+    id: "spl-03", part: "SPL", difficulty: "Medium", marks: 25, time: 49,
+    title: "Dovecote acquires Ashlar — additional depreciation from a fair value uplift flowing through cost of sales",
+    tags: ["Additional depreciation", "FV uplift", "Cost of sales impact"],
+    scenario: [
+      "Dovecote Co acquired 80% of Ashlar Co on 1 January 20X5. At acquisition, Ashlar's plant had a carrying amount of $14,000,000 and a fair value of $19,000,000, with a remaining useful life of 5 years. Ashlar's plant is used entirely in production, so all depreciation of this plant is charged to cost of sales.",
+      "For the year ended 31 December 20X6 (the second full year post-acquisition), Ashlar's own financial statements show revenue of $24,000,000 and cost of sales of $15,000,000 (before any consolidation adjustment).",
+      "Dovecote's own revenue and cost of sales for the same year were $60,000,000 and $38,000,000 respectively. There were no intra-group transactions in the year.",
+    ],
+    requirement: "Calculate consolidated cost of sales for the year ended 31 December 20X6.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Additional depreciation on the fair value uplift",
+          rows: [
+            ["Fair value uplift at acquisition: 19,000,000 − 14,000,000", "5,000,000"],
+            ["Additional annual depreciation: 5,000,000 / 5 years", "1,000,000"],
+          ],
+          note: "This is the SECOND full year post-acquisition (year ended 31 December 20X6, acquisition 1 January 20X5), so a full year (not a part-year) of additional depreciation is charged in this period — the time-apportionment issue only arises in the acquisition-year itself.",
+        },
+        {
+          heading: "W2 — Consolidated cost of sales",
+          rows: [
+            ["Dovecote's own cost of sales", "38,000,000"],
+            ["Ashlar's cost of sales (full year — acquisition was in a prior year, no time-apportionment needed this year)", "15,000,000"],
+            ["Add: additional depreciation on the fair value uplift (charged to cost of sales, as the plant is production-related)", "1,000,000"],
+            ["Consolidated cost of sales", "54,000,000"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Calculate the fair value uplift correctly", marks: 3 },
+      { point: "Calculate annual additional depreciation over the remaining useful life", marks: 4 },
+      { point: "Recognise no time-apportionment is needed as this is the second full year post-acquisition", marks: 4 },
+      { point: "Charge the additional depreciation to cost of sales specifically (not a generic expense line), reflecting the plant's production use", marks: 5 },
+      { point: "Correctly aggregate Dovecote's and Ashlar's cost of sales", marks: 3 },
+      { point: "Correct final consolidated cost of sales figure", marks: 4 },
+      { point: "Presentation and clarity", marks: 2 },
+    ],
+    tricks: [
+      "A fair value uplift on an asset used in production flows through COST OF SALES (via additional depreciation), not through a generic 'other expenses' or administrative expense line — where the additional depreciation is charged in the consolidated SPL depends entirely on what the underlying asset is used for (production plant → cost of sales; head-office building → administrative expenses; distribution vehicles → distribution costs, etc.).",
+      "Candidates frequently re-apply a time-apportionment fraction to every consolidation adjustment out of habit — but additional depreciation from a fair value uplift is time-apportioned ONLY in the year of acquisition itself; in every subsequent full year (as here), the full annual charge applies.",
+      "This adjustment reduces consolidated PROFIT (via higher cost of sales) but has no cash effect and does not change the subsidiary's OWN financial statements — it exists purely as a consolidation adjustment layered on top of the subsidiary's reported figures.",
+    ],
+  },
+  {
+    id: "spl-04", part: "SPL", difficulty: "Easy", marks: 25, time: 49,
+    title: "Elmswood charges a management fee to its subsidiary Yarrow — intra-group service fee elimination",
+    tags: ["Intra-group services", "Management fee elimination", "Other income/expense"],
+    scenario: [
+      "Elmswood Co owns 90% of Yarrow Co. During the year ended 31 December 20X8, Elmswood charged Yarrow a management fee of $1,500,000 for central administrative services, which Elmswood recorded as other income and Yarrow recorded as an administrative expense.",
+      "Elmswood's revenue for the year was $40,000,000 (excluding the management fee, which was presented separately as other income of $1,500,000). Its administrative expenses were $6,000,000. Yarrow's revenue was $15,000,000 and its administrative expenses (including the management fee) were $4,200,000.",
+    ],
+    requirement: "State the consolidation adjustment required for the management fee and calculate consolidated administrative expenses.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Consolidation adjustment for the intra-group management fee",
+          rows: [
+            ["The fee is a service provided WITHIN the group — from a group perspective, no service has been rendered to an outside party, so both the income Elmswood recorded and the expense Yarrow recorded must be eliminated in full", "—"],
+            ["Dr Other income (Elmswood) 1,500,000 / Cr Administrative expenses (Yarrow) 1,500,000", "—"],
+          ],
+          note: "There is no unrealised profit issue here (unlike inventory or non-current asset transfers) because a service, once rendered, is fully 'consumed' — there is nothing sitting in inventory that could still be resold externally. The whole fee simply nets to zero across the group.",
+        },
+        {
+          heading: "W2 — Consolidated administrative expenses",
+          rows: [
+            ["Elmswood's administrative expenses", "6,000,000"],
+            ["Yarrow's administrative expenses", "4,200,000"],
+            ["Less: intra-group management fee eliminated", "(1,500,000)"],
+            ["Consolidated administrative expenses", "8,700,000"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Recognise the management fee is an intra-group transaction requiring elimination", marks: 4 },
+      { point: "Eliminate the income recognised by Elmswood in full", marks: 4 },
+      { point: "Eliminate the expense recognised by Yarrow in full", marks: 4 },
+      { point: "Explain why there is no unrealised profit issue with a service fee (fully consumed, nothing left in inventory)", marks: 5 },
+      { point: "Correct calculation of consolidated administrative expenses", marks: 5 },
+      { point: "Presentation", marks: 3 },
+    ],
+    tricks: [
+      "Intra-group service fees (management charges, royalties, rent between group companies, intra-group interest) are always eliminated IN FULL — there is no 'partial elimination' concept as there is with unsold inventory, because a service or use-of-money charge, once incurred, cannot remain 'unrealised' in the same way a physical good sitting in a warehouse can.",
+      "Always eliminate BOTH sides of an intra-group income/expense pairing — eliminating only the income (or only the expense) without the matching other side is a common careless error that misstates consolidated profit even though it wouldn't misstate the SFP (since there's no PUP asset involved).",
+      "Watch for VARIANTS where the two companies record the transaction under DIFFERENT line items (e.g. one as 'other income', the other buried inside 'administrative expenses' rather than a clearly labelled management fee line) — the elimination still applies, you just need to trace where each side sits before netting it off.",
+    ],
+  },
+  {
+    id: "spl-05", part: "SPL", difficulty: "Medium", marks: 25, time: 49,
+    title: "Rosemont holds a 40% associate, Fennimore — share of associate's profit as a one-line item",
+    tags: ["Associate", "Share of profit", "One-line consolidation"],
+    scenario: [
+      "Rosemont Co has held 40% of Fennimore Co for several years, accounted for as an associate. For the year ended 31 December 20X9, Fennimore's profit after tax was $9,000,000, out of which Fennimore paid a dividend of $2,500,000 during the year.",
+      "Fennimore also revalued a property during the year, recognising a gain of $1,200,000 in other comprehensive income (not part of the $9,000,000 profit after tax figure).",
+      "Rosemont's own profit before tax was $28,000,000 and its own tax charge was $6,000,000; these figures exclude any effect of the investment in Fennimore other than dividend income of $1,000,000 (40% x 2,500,000) which Rosemont has recorded within investment income.",
+    ],
+    requirement: "Calculate the consolidated profit for the year and the consolidated total comprehensive income, showing how the associate is presented.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Remove the dividend income incorrectly recorded by Rosemont",
+          rows: [
+            ["Dividend income recorded by Rosemont from Fennimore (to be removed)", "1,000,000"],
+            ["Reason: under the equity method, only the GROUP'S SHARE OF THE ASSOCIATE'S PROFIT is recognised in the consolidated SPL, as a single line — dividend income is not separately recognised as it would double-count profit already picked up via the share-of-profit line and reduce the investment's carrying amount instead", "—"],
+          ],
+        },
+        {
+          heading: "W2 — Share of associate's profit (one-line consolidation)",
+          rows: [
+            ["Rosemont's share of Fennimore's profit after tax: 40% x 9,000,000", "3,600,000"],
+            ["This single figure is presented after 'profit before tax' or as part of profit for the year (per the entity's chosen presentation), NOT as a line-by-line addition of Fennimore's revenue, cost of sales, etc. — associates are never proportionally consolidated", "—"],
+          ],
+        },
+        {
+          heading: "W3 — Consolidated profit for the year",
+          rows: [
+            ["Rosemont's profit before tax", "28,000,000"],
+            ["Less: dividend income removed (W1)", "(1,000,000)"],
+            ["Rosemont's tax charge", "(6,000,000)"],
+            ["Rosemont's profit after tax, adjusted", "21,000,000"],
+            ["Add: share of associate's profit (W2)", "3,600,000"],
+            ["Consolidated profit for the year", "24,600,000"],
+          ],
+        },
+        {
+          heading: "W4 — Consolidated total comprehensive income",
+          rows: [
+            ["Consolidated profit for the year (W3)", "24,600,000"],
+            ["Share of associate's other comprehensive income: 40% x 1,200,000", "480,000"],
+            ["Consolidated total comprehensive income for the year", "25,080,000"],
+          ],
+          note: "The group's share of an associate's OTHER comprehensive income (e.g. share of a revaluation gain) is included within consolidated OCI, following the same one-line equity-accounting principle applied consistently across both profit and OCI.",
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Recognise dividend income has been incorrectly recorded and must be removed", marks: 4 },
+      { point: "Correct removal of the dividend income from Rosemont's own results", marks: 3 },
+      { point: "Calculate the group's share of the associate's profit after tax", marks: 4 },
+      { point: "Present the associate's result as a single line, not proportionally consolidated", marks: 4 },
+      { point: "Correct consolidated profit for the year figure", marks: 3 },
+      { point: "Calculate the group's share of the associate's OCI", marks: 4 },
+      { point: "Correct consolidated total comprehensive income figure", marks: 2 },
+      { point: "Presentation and clarity", marks: 1 },
+    ],
+    tricks: [
+      "Under the equity method, an associate is NEVER proportionally consolidated line-by-line (no adding 40% of Fennimore's revenue, cost of sales, etc. into the group's own figures) — only a single 'share of profit of associate' line appears in the consolidated SPL, typically presented after operating profit/finance costs.",
+      "Just as on the SFP, a dividend received from an associate must be reversed out of the parent's own recorded income in the SPL too — recognising both the dividend AND the full share of profit would double-count the same underlying economic benefit twice.",
+      "The one-line equity-accounting principle extends to OTHER COMPREHENSIVE INCOME as well as profit — the group's share of an associate's revaluation gains, foreign exchange differences, etc. are included within consolidated OCI on the same single-line basis, a detail often missed when questions test total comprehensive income rather than just profit for the year.",
+    ],
+  },
+  {
+    id: "spl-06", part: "SPL", difficulty: "Hard", marks: 25, time: 49,
+    title: "Fairholme disposes of its 90% holding in Grantley mid-year — profit to disposal, gain on disposal, discontinued operation",
+    tags: ["Mid-year disposal", "Gain on disposal", "Discontinued operation"],
+    scenario: [
+      "Fairholme Co sold its entire 90% holding in Grantley Co on 30 June 20Y1 for cash proceeds of $42,000,000. Fairholme's year end is 31 December 20Y1. The disposal represents a discontinued operation as defined in IFRS 5.",
+      "Grantley's revenue and expenses for the 6 months to the date of disposal were $16,000,000 and $11,500,000 respectively (profit before tax of $4,500,000; assume a tax charge of $900,000, giving profit after tax of $3,600,000 for the period).",
+      "At the date of disposal, the carrying amount of Grantley's net assets (excluding goodwill) was $28,000,000 and unimpaired goodwill was $5,500,000.",
+      "Fairholme's own continuing operations generated profit after tax of $19,000,000 for the full year ended 31 December 20Y1 (this figure excludes Grantley entirely).",
+    ],
+    requirement: "Present the consolidated statement of profit or loss for the year ended 31 December 20Y1, distinguishing continuing and discontinued operations, and calculate the profit attributable to non-controlling interest.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Gain on disposal of Grantley",
+          rows: [
+            ["Proceeds", "42,000,000"],
+            ["Less: net assets at disposal date", "(28,000,000)"],
+            ["Less: goodwill at disposal date (unimpaired)", "(5,500,000)"],
+            ["Add back: NCI derecognised — 10% x 28,000,000 (net assets; assumes NCI measured on net-asset basis for this add-back, ignoring any separate NCI goodwill share for simplicity of illustration)", "2,800,000"],
+            ["Gain on disposal", "11,300,000"],
+          ],
+          note: "As with the SFP-side full disposal, the NCI's share of net assets given up must be added back because the group only surrenders its own 90% economic interest in exchange for the proceeds — the 10% NCI interest leaving the group balance sheet is not part of what the GROUP gave up economically.",
+        },
+        {
+          heading: "W2 — Discontinued operation presentation (single line in the consolidated SPL)",
+          rows: [
+            ["Grantley's profit after tax for the 6 months to disposal", "3,600,000"],
+            ["Gain on disposal (W1)", "11,300,000"],
+            ["Total profit from discontinued operation", "14,900,000"],
+          ],
+          note: "IFRS 5 permits (and DipIFR typically expects) the discontinued operation to be presented as a SINGLE line on the face of the consolidated SPL ('profit for the year from discontinued operations'), with the detailed analysis of revenue, expenses, tax and the gain on disposal disclosed in the notes — it is not spread across the continuing-operations revenue/cost of sales/expense lines.",
+        },
+        {
+          heading: "W3 — Consolidated profit for the year",
+          rows: [
+            ["Profit from continuing operations (Fairholme's own, Grantley excluded)", "19,000,000"],
+            ["Profit from discontinued operations (W2)", "14,900,000"],
+            ["Consolidated profit for the year", "33,900,000"],
+          ],
+        },
+        {
+          heading: "W4 — Profit attributable to non-controlling interest",
+          rows: [
+            ["NCI share of Grantley's profit for the 6-month period only: 10% x 3,600,000", "360,000"],
+            ["NCI does NOT share in the gain on disposal — the gain accrues entirely to the group/parent, because it arises on realising the PARENT's 90% interest through the sale transaction itself, not from ongoing trading NCI has a residual claim over", "—"],
+            ["Total profit attributable to NCI for the year", "360,000"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Calculate gain on disposal using the correct derecognition formula", marks: 5 },
+      { point: "Add back NCI's share of net assets in the disposal calculation", marks: 3 },
+      { point: "Recognise the disposal meets the definition of a discontinued operation", marks: 2 },
+      { point: "Present discontinued operation as a single line (not spread across continuing lines)", marks: 4 },
+      { point: "Include Grantley's 6-month profit to disposal within the discontinued operation total", marks: 3 },
+      { point: "Include the gain on disposal within the discontinued operation total", marks: 2 },
+      { point: "Correct total consolidated profit for the year", marks: 2 },
+      { point: "NCI share calculated only on Grantley's trading profit to disposal, not on the gain", marks: 3 },
+      { point: "Presentation and clarity, distinguishing continuing/discontinued", marks: 1 },
+    ],
+    tricks: [
+      "The gain on disposal belongs entirely to the PARENT'S shareholders — NCI never shares in a parent-level gain or loss on disposal, because that gain arises from the parent realising ITS OWN interest through a sale transaction, not from the subsidiary's ongoing trading that NCI has a residual economic claim over. NCI only ever shares in the subsidiary's trading profit for the period it was still part of the group.",
+      "IFRS 5 discontinued-operation presentation is a single net line on the face of the SPL, not a re-statement of prior periods' individual revenue/cost of sales lines to strip out the discontinued operation piecemeal within continuing operations — candidates who try to net Grantley's revenue against Fairholme's own revenue line (rather than presenting a single discontinued-operations total) lose significant presentation marks even if the final total profit figure happens to be correct.",
+      "Only the PRE-disposal period results of the discontinued operation are consolidated at all — exactly as with any mid-year disposal, nothing from Grantley after 30 June 20Y1 enters the group figures, because control was lost at that date.",
+    ],
+  },
+  {
+    id: "spl-07", part: "SPL", difficulty: "Medium", marks: 25, time: 49,
+    title: "Kingsmere impairs goodwill relating to Ottershaw during the year — impairment charged through the SPL",
+    tags: ["Goodwill impairment", "SPL charge", "NCI share of impairment"],
+    scenario: [
+      "Kingsmere Co owns 75% of Ottershaw Co, with goodwill on acquisition (fair value method) of $12,000,000. During the year ended 31 December 20X9, an impairment review identified that the goodwill was impaired by $3,600,000.",
+      "Ottershaw's own profit after tax for the year, before any consolidation adjustment, was $7,200,000. There were no other consolidation adjustments in the year.",
+    ],
+    requirement: "State where the goodwill impairment is presented in the consolidated statement of profit or loss and calculate the profit attributable to non-controlling interest for the year.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Presentation of the goodwill impairment charge",
+          rows: [
+            ["The impairment charge is presented as an operating expense within the consolidated statement of profit or loss (commonly disclosed as a separate line item given its size and nature, or included within administrative expenses/'other expenses' depending on group policy) — it is never presented net against goodwill directly on the SFP without first flowing through profit or loss for the period in which it arises", "—"],
+          ],
+        },
+        {
+          heading: "W2 — NCI share of profit for the year (fair value method — impairment shared with NCI)",
+          rows: [
+            ["Ottershaw's profit after tax for the year (unaffected by the goodwill impairment, which is a GROUP-level consolidation adjustment, not an adjustment to Ottershaw's own individual financial statements)", "7,200,000"],
+            ["NCI share of Ottershaw's own profit: 25% x 7,200,000", "1,800,000"],
+            ["Less: NCI share of the goodwill impairment (fair value method): 25% x 3,600,000", "(900,000)"],
+            ["Total profit attributable to NCI for the year", "900,000"],
+          ],
+        },
+        {
+          heading: "W3 — Contrast: if NCI had instead been measured at proportionate share of net assets",
+          rows: [
+            ["Under the proportionate share method, no NCI goodwill would ever have been recognised, so the impairment would be charged wholly against the PARENT's share of profit, and NCI's share of profit for the year would simply be 25% x 7,200,000 = 1,800,000 with no impairment deduction at all", "—"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "State impairment is charged as an expense in the consolidated SPL for the period it arises", marks: 4 },
+      { point: "Recognise Ottershaw's own individual profit is unaffected by a group-level goodwill impairment", marks: 3 },
+      { point: "Calculate NCI's share of Ottershaw's own profit", marks: 3 },
+      { point: "Correctly identify that fair value method means impairment is shared with NCI", marks: 5 },
+      { point: "Calculate NCI's share of the impairment", marks: 3 },
+      { point: "Correct net NCI profit for the year", marks: 3 },
+      { point: "Explain the contrasting treatment under the proportionate share method", marks: 3 },
+      { point: "Presentation and clarity", marks: 1 },
+    ],
+    tricks: [
+      "A goodwill impairment is a CONSOLIDATION adjustment — it never appears in either the parent's or the subsidiary's own individual financial statements, because goodwill itself only exists at the consolidated level. This means the subsidiary's reported profit for NCI purposes is calculated first, entirely unaffected by the impairment, and the impairment is deducted from NCI's share SEPARATELY, only if the fair value method was used.",
+      "Exactly as on the SFP side, whether NCI shares in a goodwill impairment charged through the SPL depends entirely on which NCI measurement method was chosen at acquisition — fair value method shares the impairment with NCI in the ownership ratio; proportionate share method does not, because NCI's own goodwill was never recognised to be impaired in the first place.",
+      "A common wrong shortcut is to impair goodwill by adjusting the subsidiary's OWN profit figure (i.e. deducting the impairment before calculating 25% NCI) even under the proportionate share method — this both misstates NCI and double-counts the impairment, since the parent's share should absorb 100% of it separately.",
+    ],
+  },
+  {
+    id: "spl-08", part: "SPL", difficulty: "Hard", marks: 25, time: 49,
+    title: "Thackeray acquires Millbrook — preference dividends and their effect on NCI's profit allocation",
+    tags: ["Preference dividends", "NCI allocation", "Finance costs"],
+    scenario: [
+      "Thackeray Co owns 80% of the ordinary shares of Millbrook Co. Millbrook also has $5,000,000 of 8% redeemable preference shares in issue, all held by parties outside the group, correctly classified as a financial liability (see the preference share classification principles tested elsewhere in this practice set).",
+      "For the year ended 31 December 20X8, Millbrook's profit before the preference dividend and before tax was $9,500,000. Millbrook's tax charge for the year was $1,900,000. The preference dividend of $400,000 (8% x 5,000,000) has NOT yet been deducted in arriving at either of these figures — it has been recorded, incorrectly, as a distribution of profit (i.e. a movement in equity) rather than a finance cost.",
+    ],
+    requirement: "Restate Millbrook's profit after tax correctly and calculate the profit attributable to the (ordinary share) non-controlling interest for the year.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Reclassify the preference dividend as a finance cost",
+          rows: [
+            ["Millbrook's profit before tax as originally stated (before preference dividend deduction)", "9,500,000"],
+            ["Less: preference dividend, correctly reclassified as a finance cost (not a distribution)", "(400,000)"],
+            ["Restated profit before tax", "9,100,000"],
+            ["Less: tax charge (unaffected by the reclassification, as tax is calculated on taxable profit under the applicable tax rules, not on the accounting distinction between finance cost and distribution)", "(1,900,000)"],
+            ["Restated profit after tax", "7,200,000"],
+          ],
+          note: "Whether the instrument is classified as a liability, redeemable preference dividends are a CONTRACTUAL return on a debt-like instrument and must be deducted in arriving at profit for the period, exactly like interest on a loan — this is unaffected by how Millbrook's own bookkeeping happened to originally record the payment.",
+        },
+        {
+          heading: "W2 — NCI share of profit (ordinary shares only)",
+          rows: [
+            ["Restated profit after tax, after finance costs (W1)", "7,200,000"],
+            ["NCI share (ordinary shares only — preference shareholders are NOT NCI, see W3): 20% x 7,200,000", "1,440,000"],
+          ],
+        },
+        {
+          heading: "W3 — Why preference shareholders are excluded from the NCI calculation",
+          rows: [
+            ["The preference shares are a financial liability, not equity — their holders have no residual equity interest in Millbrook and are not 'non-controlling interest' under IFRS 10/IAS 32, regardless of being external to the group", "—"],
+            ["NCI relates ONLY to the 20% of ORDINARY equity shares in Millbrook that Thackeray does not own", "—"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Recognise the preference dividend has been misclassified as a distribution rather than a finance cost", marks: 5 },
+      { point: "Correctly deduct the preference dividend from profit before tax", marks: 4 },
+      { point: "Recognise tax charge is unaffected by the reclassification", marks: 2 },
+      { point: "Correctly restated profit after tax", marks: 3 },
+      { point: "Explain why preference shareholders are not NCI", marks: 5 },
+      { point: "Calculate NCI's share on the ordinary-share basis only, using the restated profit", marks: 4 },
+      { point: "Presentation and clarity", marks: 2 },
+    ],
+    tricks: [
+      "This is the SPL companion to the preference-share classification trap tested on the SFP side: because mandatorily redeemable preference shares are a LIABILITY, their dividend is always a FINANCE COST deducted in arriving at profit, never a distribution of profit reflected only in the statement of changes in equity — restating this is frequently the crux of the whole question.",
+      "Once the preference dividend is correctly reclassified as a finance cost, the resulting (lower) profit after tax is what should be used as the base for calculating NCI's share — a common error is to calculate NCI's share on the ORIGINAL (higher, incorrectly stated) profit figure, forgetting to first apply the restatement.",
+      "NCI's percentage always applies only to the ordinary equity portion of a subsidiary — never gross up or include preference shareholders (or any other non-equity external party) within the NCI percentage or population, however the question describes them.",
+    ],
+  },
+  {
+    id: "spl-09", part: "SPL", difficulty: "Medium", marks: 25, time: 49,
+    title: "Furlong sells to Chandry — PUP on both opening and closing inventory in the same period",
+    tags: ["PUP opening and closing inventory", "Two-period PUP effect"],
+    scenario: [
+      "Furlong Co owns 65% of Chandry Co. Furlong regularly sells goods to Chandry at a margin of 20% on selling price.",
+      "At 1 January 20X9 (the start of the current year), Chandry held inventory purchased from Furlong of $2,500,000 (at selling price to Chandry). At 31 December 20X9, Chandry held inventory purchased from Furlong of $4,000,000 (at selling price to Chandry).",
+      "During the year, total intra-group sales from Furlong to Chandry were $15,000,000. Furlong's own cost of sales for the year (before any consolidation adjustment) was $34,000,000 and Chandry's was $18,000,000.",
+    ],
+    requirement: "Calculate consolidated cost of sales for the year ended 31 December 20X9.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Unrealised profit in closing inventory",
+          rows: [
+            ["Closing inventory at selling price", "4,000,000"],
+            ["Margin of 20% on selling price", "20%"],
+            ["Unrealised profit in closing inventory", "800,000"],
+          ],
+        },
+        {
+          heading: "W2 — Unrealised profit in opening inventory",
+          rows: [
+            ["Opening inventory at selling price", "2,500,000"],
+            ["Margin of 20% on selling price", "20%"],
+            ["Unrealised profit in opening inventory", "500,000"],
+          ],
+        },
+        {
+          heading: "W3 — Net effect on consolidated cost of sales",
+          rows: [
+            ["Furlong's cost of sales", "34,000,000"],
+            ["Chandry's cost of sales", "18,000,000"],
+            ["Less: intra-group sales/purchases eliminated", "(15,000,000)"],
+            ["Add: unrealised profit in CLOSING inventory (increases cost of sales)", "800,000"],
+            ["Less: unrealised profit in OPENING inventory (decreases cost of sales)", "(500,000)"],
+            ["Consolidated cost of sales", "37,300,000"],
+          ],
+          note: "This is the standard 'increase in PUP' mechanic: the opening PUP relates to profit that was unrealised at the START of the year but has, by definition, now been realised during THIS year (the inventory was presumably sold on to third parties during the year), so last year's PUP add-back must be REVERSED (i.e. it reduces this year's cost of sales) while a fresh PUP is created for whatever remains unsold at THIS year end. In net terms, only the INCREASE in unrealised profit (800,000 − 500,000 = 300,000) actually depresses this year's consolidated profit relative to last year.",
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Calculate unrealised profit in closing inventory correctly", marks: 4 },
+      { point: "Calculate unrealised profit in opening inventory correctly", marks: 4 },
+      { point: "Eliminate the full intra-group sales/purchases figure", marks: 3 },
+      { point: "Add closing PUP to consolidated cost of sales", marks: 4 },
+      { point: "Deduct (reverse) opening PUP from consolidated cost of sales", marks: 4 },
+      { point: "Correct final consolidated cost of sales figure", marks: 4 },
+      { point: "Explain the 'net movement in PUP' concept clearly", marks: 2 },
+    ],
+    tricks: [
+      "Whenever a question gives BOTH an opening and a closing intra-group inventory balance, both must be adjusted — the closing PUP is added to cost of sales (deferring unrealised profit to a future period) while the opening PUP is deducted (reversing last year's deferral, since that inventory has now, presumably, been sold on externally during the current year).",
+      "A frequent, costly error is adjusting only for the closing inventory PUP and forgetting the opening inventory reversal entirely — this overstates consolidated cost of sales (understates group profit) by the FULL closing PUP rather than by the correct NET movement.",
+      "This is a downstream sale (Furlong, the parent, is the seller), so — as with the earlier downstream PUP example — the whole net PUP adjustment affects only the group's/parent's own profit, with no NCI impact; had Chandry (the subsidiary) been the seller instead, both the opening and closing PUP figures would need to be reflected in Chandry's own profit before splitting it between parent and NCI.",
+    ],
+  },
+  {
+    id: "spl-10", part: "SPL", difficulty: "Easy", marks: 25, time: 49,
+    title: "Gantry lends to its subsidiary Wick — eliminating intra-group loan interest",
+    tags: ["Intra-group loan interest", "Finance income and cost elimination"],
+    scenario: [
+      "Gantry Co owns 85% of Wick Co. On 1 January 20X9, Gantry advanced a $10,000,000 interest-bearing loan to Wick at 6% per annum, repayable in 20Y4. For the year ended 31 December 20X9, Gantry recorded finance income of $600,000 from this loan (within its own investment/finance income), and Wick recorded a matching finance cost of $600,000.",
+      "Gantry's own finance income for the year (including the intra-group amount) was $1,100,000. Wick's own finance costs for the year (including the intra-group amount) were $900,000.",
+    ],
+    requirement: "Calculate consolidated finance income and consolidated finance costs for the year.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Elimination of intra-group loan interest",
+          rows: [
+            ["Intra-group interest: Gantry's finance income = Wick's finance cost, both fully within the group", "600,000"],
+            ["Dr Finance income (Gantry) 600,000 / Cr Finance costs (Wick) 600,000", "—"],
+          ],
+          note: "As with any other intra-group income/expense pairing, the elimination is straightforward and complete because interest, once accrued, cannot be 'partially unrealised' the way inventory profit can — from the single-entity perspective the group has simply moved cash internally and no external interest expense or income has arisen on this loan.",
+        },
+        {
+          heading: "W2 — Consolidated finance income and finance costs",
+          rows: [
+            ["Consolidated finance income: 1,100,000 − 600,000", "500,000"],
+            ["Consolidated finance costs: 900,000 − 600,000", "300,000"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Recognise the loan interest is an intra-group item requiring elimination", marks: 4 },
+      { point: "Correct double entry eliminating both finance income and finance cost", marks: 4 },
+      { point: "Explain why the elimination is complete/full, unlike inventory PUP", marks: 4 },
+      { point: "Correct consolidated finance income figure", marks: 4 },
+      { point: "Correct consolidated finance cost figure", marks: 4 },
+      { point: "Presentation", marks: 5 },
+    ],
+    tricks: [
+      "Intra-group loan interest is eliminated in exactly the same full, symmetrical way as an intra-group management fee — there is no partial-realisation concept, because interest income/expense (unlike inventory profit) does not sit embedded in an asset that might later be resold externally.",
+      "Don't forget that the underlying LOAN BALANCE (the $10,000,000 principal) is a separate SFP-side intra-group balance that must also be eliminated in full (Dr Loan payable / Cr Loan receivable) — a question testing SPL elimination of interest often also expects the parallel SFP elimination of the loan principal itself, which candidates sometimes overlook if focused solely on the profit and loss impact.",
+      "If the loan carried a market interest rate and there were no other complicating factors (e.g. no impairment of the receivable, no expected credit loss issues), the elimination is a clean, full reversal with no further adjustment needed — unlike, say, deferred/contingent consideration, there is no discounting or remeasurement issue on a straightforward intra-group loan bearing a market rate.",
+    ],
+  },
+  {
+    id: "spl-11", part: "SPL", difficulty: "Hard", marks: 25, time: 49,
+    title: "Millthorpe's German subsidiary Reinholt has a different reporting date — adjustment before consolidation",
+    tags: ["Different reporting date", "Adjustment before consolidation", "Coterminous year ends"],
+    scenario: [
+      "Millthorpe Co (year end 31 December) owns 70% of Reinholt Co, which has a reporting date of 30 September (a 3-month difference) for local regulatory reasons. IFRS 10 permits use of Reinholt's financial statements to 30 September, adjusted for significant transactions in the intervening period, provided the difference does not exceed 3 months.",
+      "Reinholt's own financial statements for the year ended 30 September 20Y2 show profit after tax of $12,000,000, accruing evenly through the year.",
+      "During October to December 20Y2 (the 3-month gap period, not reflected in Reinholt's 30 September accounts), Reinholt disposed of an item of plant at a significant gain of $2,400,000, which must be reflected as a significant transaction occurring in the intervening period per IFRS 10.",
+    ],
+    requirement: "Calculate the profit of Reinholt to be included in the consolidated financial statements for the year ended 31 December 20Y2, and the profit attributable to non-controlling interest.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Adjusting for the different reporting date",
+          rows: [
+            ["IFRS 10 permits a difference of up to 3 months between the reporting dates of a parent and subsidiary, provided adjustments are made for the effects of significant transactions or events occurring in the intervening period", "—"],
+            ["Reinholt's reporting date (30 September) is exactly 3 months before Millthorpe's (31 December) — at the outer limit of what is permitted without requiring Reinholt to prepare additional interim financial statements", "—"],
+          ],
+        },
+        {
+          heading: "W2 — Profit of Reinholt to be consolidated",
+          rows: [
+            ["Reinholt's profit after tax for its own year to 30 September 20Y2 (used as the base, per the permitted 3-month gap)", "12,000,000"],
+            ["Add: significant transaction in the intervening period (gain on plant disposal, Oct–Dec 20Y2), required to be reflected as an adjustment per IFRS 10", "2,400,000"],
+            ["Total profit of Reinholt included in the consolidated financial statements", "14,400,000"],
+          ],
+          note: "Only SIGNIFICANT transactions/events in the gap period need to be separately adjusted for — routine trading in the 3-month gap is NOT re-measured or added on top, since the whole point of the permitted reporting-date difference is to avoid requiring a full extra set of interim financial statements for ordinary trading activity.",
+        },
+        {
+          heading: "W3 — NCI share of profit",
+          rows: [
+            ["Total Reinholt profit for consolidation purposes (W2)", "14,400,000"],
+            ["NCI share: 30% x 14,400,000", "4,320,000"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Recognise IFRS 10 permits up to a 3-month difference in reporting dates", marks: 3 },
+      { point: "Recognise significant transactions in the gap period must still be adjusted for", marks: 5 },
+      { point: "Correctly identify the gain on plant disposal as such a significant transaction", marks: 4 },
+      { point: "Add the significant transaction's effect to Reinholt's own reported profit", marks: 4 },
+      { point: "Recognise routine trading in the gap period does NOT require separate adjustment", marks: 4 },
+      { point: "Calculate total Reinholt profit correctly included for consolidation", marks: 2 },
+      { point: "Calculate NCI's share of the adjusted total profit", marks: 2 },
+      { point: "Presentation and clarity of the IFRS 10 explanation", marks: 1 },
+    ],
+    tricks: [
+      "This tests a rule that is very easy to state ('up to 3 months is permitted') but easy to misapply in practice: the permitted gap is not a free pass to ignore everything in the intervening period — SIGNIFICANT transactions and events occurring in the gap must still be reflected by way of adjustment, precisely to prevent a group from timing major transactions to fall just outside the subsidiary's own reporting period and 'disappear' from the group accounts for a full year.",
+      "A common wrong answer either (a) ignores the gap-period transaction entirely because 'the accounts to 30 September are what's given', or (b) tries to fully re-consolidate three months of Reinholt's detailed trading results as if a full new set of interim accounts were required — both miss the precise, narrower IFRS 10 requirement: adjust ONLY for identified SIGNIFICANT items, not routine trading.",
+      "If the difference between reporting dates EXCEEDS 3 months, IFRS 10 requires the subsidiary to prepare additional financial information as of the parent's reporting date for consolidation purposes — always check first whether the gap given in a question is within or beyond the 3-month threshold, as it changes the whole approach.",
+    ],
+  },
+  {
+    id: "spl-12", part: "SPL", difficulty: "Medium", marks: 25, time: 49,
+    title: "Amberleigh sells inventory to its subsidiary Coppice at a fair-value-adjusted cost — combined FV and PUP effect on cost of sales",
+    tags: ["FV adjustment on inventory", "PUP interaction", "Cost of sales", "NCI impact"],
+    scenario: [
+      "Amberleigh Co acquired 70% of Coppice Co on 1 January 20X9. At acquisition, Coppice held inventory with a carrying amount of $4,000,000 and a fair value of $5,200,000; all of this inventory was sold to external customers by 30 June 20X9.",
+      "Separately and unrelated to the fair value adjustment, during the second half of 20X9 Coppice sold goods to Amberleigh for $6,000,000 at a margin of 25% on selling price; 60% of these goods remained in Amberleigh's inventory at 31 December 20X9 (the year end).",
+      "Coppice's own cost of sales for the full year ended 31 December 20X9 was $22,000,000. Coppice's own profit after tax for the full year was $8,000,000 (this is the FULL YEAR figure — the acquisition was on 1 January 20X9, so no time-apportionment is needed this year).",
+    ],
+    requirement: "Calculate Coppice's cost of sales as it should be included in the consolidated statement of profit or loss, and the profit attributable to non-controlling interest for the year.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Fair value adjustment on inventory (fully unwinds within the year)",
+          rows: [
+            ["Fair value uplift at acquisition: 5,200,000 − 4,000,000", "1,200,000"],
+            ["All of this inventory sold externally by 30 June 20X9, so the FULL uplift increases Coppice's cost of sales for the year (the goods cost the GROUP more than Coppice's own books show, because of the uplift)", "1,200,000 (add to cost of sales)"],
+          ],
+        },
+        {
+          heading: "W2 — Unrealised profit on the SEPARATE intra-group sale (upstream — Coppice is seller)",
+          rows: [
+            ["Goods remaining in Amberleigh's inventory: 60% x 6,000,000", "3,600,000"],
+            ["Margin of 25% on selling price", "25%"],
+            ["Unrealised profit: 3,600,000 x 25%", "900,000 (add to cost of sales)"],
+          ],
+          note: "This is a separate, second adjustment relating to a completely different transaction (Coppice selling to Amberleigh) from the fair value uplift in W1 (which relates to Coppice's OWN inventory held at acquisition) — do not conflate the two.",
+        },
+        {
+          heading: "W3 — Coppice's cost of sales for consolidation",
+          rows: [
+            ["Coppice's own cost of sales", "22,000,000"],
+            ["Add: fair value uplift on acquisition-date inventory, now sold (W1)", "1,200,000"],
+            ["Add: unrealised profit on year-end intra-group inventory (W2)", "900,000"],
+            ["Coppice's cost of sales as included in the consolidated SPL", "24,100,000"],
+          ],
+          note: "Note that the intra-group SALES figure (6,000,000) is separately eliminated against the GROUP's consolidated revenue/cost of sales on consolidation (Dr Revenue / Cr Cost of sales for 6,000,000) in addition to the 900,000 PUP add-back shown here — this working isolates only the effects that fall specifically within Coppice's own cost of sales line for the NCI calculation in W4.",
+        },
+        {
+          heading: "W4 — Profit attributable to non-controlling interest",
+          rows: [
+            ["Coppice's profit after tax as reported", "8,000,000"],
+            ["Less: fair value uplift now expensed through cost of sales (W1) — reduces Coppice's economic profit for group purposes", "(1,200,000)"],
+            ["Less: unrealised profit on upstream intra-group sale (W2) — Coppice is the seller, so this reduces COPPICE's profit for NCI purposes", "(900,000)"],
+            ["Coppice's adjusted profit for NCI calculation", "5,900,000"],
+            ["NCI share: 30% x 5,900,000", "1,770,000"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Calculate the fair value uplift on inventory at acquisition", marks: 3 },
+      { point: "Recognise the uplift fully unwinds through cost of sales once inventory is sold externally", marks: 4 },
+      { point: "Correctly identify the separate, unrelated upstream intra-group sale", marks: 2 },
+      { point: "Calculate unrealised profit on the year-end unsold intra-group inventory (margin basis)", marks: 3 },
+      { point: "Combine both effects correctly within Coppice's cost of sales", marks: 3 },
+      { point: "Recognise BOTH adjustments reduce Coppice's own profit (both originate with Coppice) for NCI purposes", marks: 4 },
+      { point: "Correct NCI share calculation on Coppice's adjusted profit", marks: 4 },
+      { point: "Clear separation of the two distinct adjustments in the workings/narrative", marks: 2 },
+    ],
+    tricks: [
+      "This question deliberately combines TWO similar-looking but conceptually distinct adjustments that both hit cost of sales — a fair value uplift on inventory HELD AT ACQUISITION (a one-off, unwinds once that specific inventory is sold) and an unrelated ONGOING intra-group trading PUP (recurring each period based on year-end unsold balances). Candidates who merge the two into a single adjustment, or apply the FV-uplift logic to the trading PUP (or vice versa), lose significant marks.",
+      "Both adjustments here happen to reduce COPPICE's (the subsidiary's) own profit for group purposes — the fair value uplift because it relates to COPPICE's own acquisition-date assets, and the trading PUP because COPPICE is the seller (upstream) — so BOTH flow through into the NCI calculation. Had the intra-group trading instead been downstream (Amberleigh selling to Coppice), only the fair value uplift effect (never NCI-shared, since it's a pure consolidation mechanic based on the parent's acquisition accounting, not the sub's own trading) would remain relevant to Coppice's profit, while the PUP piece would sit with the parent instead.",
+      "Do not forget the SEPARATE, additional consolidated revenue/cost-of-sales elimination of the FULL intra-group sales value (6,000,000) required alongside the 900,000 PUP add-back — the PUP is an adjustment IN ADDITION TO the full elimination, not a substitute for it.",
+    ],
+  },
+  {
+    id: "spl-13", part: "SPL", difficulty: "Medium", marks: 25, time: 49,
+    title: "Overstrand records a bargain purchase gain on acquiring Sandpiper during the year",
+    tags: ["Bargain purchase gain", "SPL presentation", "One-off item"],
+    scenario: [
+      "Overstrand Co acquired 100% of Sandpiper Co on 1 October 20X6 (Overstrand's year end is 31 December 20X6). After the required IFRS 3 reassessment, a bargain purchase gain of $2,800,000 arose on acquisition.",
+      "Sandpiper's profit for the 3 months post-acquisition (1 October to 31 December 20X6) was $1,100,000.",
+      "Overstrand's own profit before tax for the full year (excluding any effect of Sandpiper or the bargain purchase gain) was $16,000,000.",
+    ],
+    requirement: "Calculate consolidated profit before tax for the year ended 31 December 20X6, explaining where the bargain purchase gain is presented.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Presentation of the bargain purchase gain",
+          rows: [
+            ["The bargain purchase gain is recognised immediately in the consolidated profit or loss AT THE ACQUISITION DATE — for a mid-year acquisition, this means it is included within the CURRENT year's consolidated SPL (the year in which the acquisition took place), typically as a separate, clearly disclosed line given its one-off, non-operating nature", "—"],
+          ],
+        },
+        {
+          heading: "W2 — Consolidated profit before tax for the year",
+          rows: [
+            ["Overstrand's own profit before tax (excluding Sandpiper)", "16,000,000"],
+            ["Sandpiper's profit for the 3-month post-acquisition period", "1,100,000"],
+            ["Bargain purchase gain (recognised in full in the acquisition year)", "2,800,000"],
+            ["Consolidated profit before tax for the year ended 31 December 20X6", "19,900,000"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Recognise the bargain purchase gain is recognised immediately, not deferred", marks: 4 },
+      { point: "Recognise it falls within the CURRENT year's consolidated SPL as the acquisition occurred this year", marks: 4 },
+      { point: "Include Sandpiper's post-acquisition (3-month) profit only", marks: 4 },
+      { point: "Recognise no pre-acquisition Sandpiper profit is included", marks: 3 },
+      { point: "Correct total consolidated profit before tax", marks: 4 },
+      { point: "Explain typical presentation as a distinct, disclosed line given its nature", marks: 5 },
+      { point: "Presentation and clarity", marks: 1 },
+    ],
+    tricks: [
+      "A bargain purchase gain is a ONE-OFF item recognised entirely in the period the acquisition occurs — it is not spread, deferred, or amortised over any future period, and (as tested elsewhere in this set) it cannot be recognised at all until the mandatory IFRS 3 reassessment of the acquisition accounting has been performed.",
+      "As with any mid-year acquisition, only the SUBSIDIARY's post-acquisition period profit is consolidated — here, only Sandpiper's 3 months of post-acquisition trading enters the group figures, entirely separate from (and in addition to) the one-off bargain purchase gain, which relates to the acquisition event itself rather than a period of trading.",
+      "Although IFRS 3 does not mandate a specific line item for the gain, DipIFR-style answers are expected to note that its size and non-recurring nature typically warrant separate disclosure/presentation, rather than being buried anonymously within 'other income' where a user of the financial statements might not identify its one-off nature.",
+    ],
+  },
+  {
+    id: "spl-14", part: "SPL", difficulty: "Hard", marks: 25, time: 49,
+    title: "Castlebridge steps up from a 20% associate to a 55% subsidiary of Pemberley mid-year — remeasurement gain in the SPL",
+    tags: ["Step acquisition", "Remeasurement gain in P/L", "Mid-year consolidation start"],
+    scenario: [
+      "Castlebridge Co held a 20% associate interest in Pemberley Co, equity-accounted, with a carrying amount of $8,500,000 immediately before the transaction below. On 1 April 20Y0, Castlebridge acquired a further 35% of Pemberley for cash, taking control (total holding 55%). The fair value of the original 20% holding at 1 April 20Y0 was $10,200,000.",
+      "Castlebridge's year end is 31 December 20Y0. Pemberley's profit for the 9 months from 1 April to 31 December 20Y0 (the post-acquisition, consolidated period) was $6,000,000, accruing evenly.",
+      "Castlebridge's own profit before tax for the year (excluding any effect of Pemberley) was $22,000,000.",
+    ],
+    requirement: "Calculate the remeasurement gain or loss to be recognised on the step acquisition and the consolidated profit before tax for the year ended 31 December 20Y0.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Remeasurement gain on the previously held associate interest",
+          rows: [
+            ["Fair value of the original 20% holding at 1 April 20Y0 (date control obtained)", "10,200,000"],
+            ["Less: equity-accounted carrying amount immediately before the step acquisition", "(8,500,000)"],
+            ["Remeasurement gain, recognised in profit or loss", "1,700,000"],
+          ],
+          note: "This gain is recognised entirely within CONSOLIDATED profit or loss for the current period (the period in which control is obtained) — it is a group-level consolidation adjustment, not an adjustment to Castlebridge's own separate/individual financial statements, and it is recognised even though the 20% stake itself hasn't been sold to a third party (it is treated, in substance, as if notionally disposed of and immediately reacquired at fair value as part of obtaining control).",
+        },
+        {
+          heading: "W2 — Consolidated profit before tax for the year",
+          rows: [
+            ["Castlebridge's own profit before tax (excluding Pemberley)", "22,000,000"],
+            ["Pemberley's profit, post-acquisition period only (1 April–31 December, 9 months, already stated as the 9-month figure)", "6,000,000"],
+            ["Remeasurement gain on the previously held associate interest (W1)", "1,700,000"],
+            ["Consolidated profit before tax for the year ended 31 December 20Y0", "29,700,000"],
+          ],
+          note: "Note that Castlebridge's own separate financial statements would have equity-accounted for its 20% share of Pemberley's PRE-acquisition (1 Jan–31 Mar) profit as an associate up to the date control was obtained — this equity-accounted share is a component of Castlebridge's own results before the step acquisition and is superseded, from 1 April 20Y0 onward, by full consolidation of 100% of Pemberley's post-acquisition results (subject to the 45% NCI share being separately allocated below the line).",
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Recognise this is a step acquisition to control (associate becomes subsidiary)", marks: 3 },
+      { point: "Remeasure the previously held 20% interest to fair value at the date control is obtained", marks: 4 },
+      { point: "Recognise the remeasurement gain in profit or loss for the CURRENT period", marks: 4 },
+      { point: "Explain the notional disposal-and-reacquisition rationale", marks: 3 },
+      { point: "Consolidate only Pemberley's post-acquisition (9-month) profit, not the full year", marks: 4 },
+      { point: "Correctly combine Castlebridge's own profit, Pemberley's post-acquisition profit and the remeasurement gain", marks: 4 },
+      { point: "Recognise the transition from equity accounting to full consolidation at the control date", marks: 2 },
+      { point: "Presentation and clarity", marks: 1 },
+    ],
+    tricks: [
+      "The remeasurement gain on a step acquisition is recognised in PROFIT OR LOSS for the period control is obtained — this is a frequently tested 'surprise' because many candidates assume anything relating to a previously-held equity-accounted interest must flow through equity or OCI, when in fact IFRS 3 specifically requires it through the P&L, exactly like a disposal gain.",
+      "Just as with any other mid-year acquisition, only the POST-acquisition trading of the (now) subsidiary is line-by-line consolidated — the PRE-acquisition period continues to be reflected only through the (superseded) equity method in the parent's own results up to the date control passed, never restated or reconsolidated retrospectively.",
+      "This scenario is easily confused with an acquisition that does NOT change the level of influence (e.g. simply topping up an existing controlling stake from 55% to 70%, control retained throughout) — that alternative scenario would NOT trigger any remeasurement gain at all, and would instead be accounted for as a transaction between owners directly in equity, with zero P&L impact.",
+    ],
+  },
+  {
+    id: "spl-15", part: "SPL", difficulty: "Hard", marks: 25, time: 49,
+    title: "Ravensworth Group — comprehensive consolidated SPL: revenue/COS elimination, PUP, NCI, associate share, and EPS impact",
+    tags: ["Comprehensive", "Revenue/COS elimination", "PUP", "NCI", "Associate", "EPS"],
+    scenario: [
+      "Ravensworth Co owns 75% of Bellhaven Co (acquired several years ago, no time-apportionment needed) and 30% of Corrigan Co (an associate, held for several years).",
+      "For the year ended 31 December 20X9: Ravensworth's own revenue and cost of sales were $80,000,000 and $52,000,000; Bellhaven's own revenue and cost of sales were $30,000,000 and $19,000,000.",
+      "During the year, Bellhaven sold goods to Ravensworth for $5,000,000 at a margin of 20% on selling price; 40% remained in Ravensworth's inventory at the year end.",
+      "Bellhaven's profit after tax for the year (before any consolidation adjustment) was $6,500,000.",
+      "Corrigan's profit after tax for the year was $4,000,000; Corrigan paid no dividend.",
+      "Ravensworth's own profit after tax for the year (excluding Bellhaven and Corrigan entirely, and before any finance costs/tax adjustments beyond what is stated) was $18,000,000. Ravensworth has 40,000,000 ordinary shares in issue throughout the year.",
+    ],
+    requirement: "Calculate consolidated revenue, consolidated cost of sales, profit attributable to non-controlling interest, profit attributable to owners of the parent, and basic earnings per share.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Unrealised profit on intra-group inventory (upstream — Bellhaven is seller)",
+          rows: [
+            ["Goods remaining in Ravensworth's inventory: 40% x 5,000,000", "2,000,000"],
+            ["Margin of 20% on selling price", "20%"],
+            ["Unrealised profit", "400,000"],
+          ],
+        },
+        {
+          heading: "W2 — Consolidated revenue and cost of sales",
+          rows: [
+            ["Consolidated revenue: 80,000,000 + 30,000,000 − 5,000,000 (intra-group sales)", "105,000,000"],
+            ["Consolidated cost of sales: 52,000,000 + 19,000,000 − 5,000,000 (intra-group purchases) + 400,000 (PUP)", "66,400,000"],
+          ],
+        },
+        {
+          heading: "W3 — Bellhaven's adjusted profit for NCI purposes",
+          rows: [
+            ["Bellhaven's profit after tax as reported", "6,500,000"],
+            ["Less: unrealised profit on upstream sale (W1)", "(400,000)"],
+            ["Bellhaven's adjusted profit", "6,100,000"],
+          ],
+        },
+        {
+          heading: "W4 — Profit attributable to non-controlling interest",
+          rows: [
+            ["NCI share: 25% x 6,100,000", "1,525,000"],
+          ],
+          note: "Corrigan is an associate, equity-accounted — there is no NCI concept for an associate at all (NCI only arises for consolidated SUBSIDIARIES); Corrigan's results affect only the group's share of associate profit line, entirely separate from the NCI calculation.",
+        },
+        {
+          heading: "W5 — Consolidated (group) profit for the year",
+          rows: [
+            ["Ravensworth's own profit after tax", "18,000,000"],
+            ["Bellhaven's adjusted profit after tax (W3) — for aggregation, before splitting parent/NCI", "6,100,000"],
+            ["Share of Corrigan's (associate) profit: 30% x 4,000,000", "1,200,000"],
+            ["Total consolidated profit for the year", "25,300,000"],
+            ["Less: profit attributable to NCI (W4)", "(1,525,000)"],
+            ["Profit attributable to owners of the parent", "23,775,000"],
+          ],
+        },
+        {
+          heading: "W6 — Basic earnings per share",
+          rows: [
+            ["Profit attributable to owners of the parent (W5)", "23,775,000"],
+            ["Weighted average number of ordinary shares in issue", "40,000,000"],
+            ["Basic EPS: 23,775,000 / 40,000,000", "$0.594"],
+          ],
+          note: "Basic EPS is always calculated using PROFIT ATTRIBUTABLE TO OWNERS OF THE PARENT — never total consolidated profit including the NCI share — divided by the parent's own weighted average number of ordinary shares in issue. The NCI's share of profit and Bellhaven's/Corrigan's shares outstanding are entirely irrelevant to the EPS calculation; only the PARENT's own share count matters, because EPS measures the parent's own shareholders' claim.",
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Consolidated revenue: full-line addition less intra-group sales", marks: 3 },
+      { point: "Consolidated cost of sales: full-line addition less intra-group purchases plus PUP", marks: 3 },
+      { point: "Correct PUP calculation (margin basis, 40% unsold)", marks: 3 },
+      { point: "Recognise upstream nature (Bellhaven is seller) means NCI is affected by the PUP", marks: 3 },
+      { point: "Correct NCI share of profit calculation on adjusted Bellhaven profit", marks: 3 },
+      { point: "Correctly treat Corrigan as an equity-accounted associate, no NCI, one-line share of profit", marks: 3 },
+      { point: "Correct aggregation of consolidated profit for the year (parent + sub adjusted + share of associate)", marks: 3 },
+      { point: "Correct split between NCI and owners of the parent", marks: 2 },
+      { point: "Correct basic EPS calculation using parent's profit and parent's own share count only", marks: 3 },
+      { point: "Overall structure, cross-referencing, and presentation across a multi-part comprehensive question", marks: 2 },
+    ],
+    tricks: [
+      "This question deliberately combines a subsidiary (full consolidation, PUP, NCI) with an associate (equity method, no NCI, one-line share of profit) in the SAME question — the most common error is applying subsidiary-style logic to the associate (e.g. calculating a spurious '30% NCI' on Corrigan, or eliminating any intra-group trading with Corrigan as if it were fully consolidated, when in fact NO adjustment for unrealised profit on transactions with an EQUITY-ACCOUNTED associate is even made against consolidated revenue/cost of sales in the same line-by-line way — only the group's SHARE of any unrealised profit on transactions with an associate is adjusted, and only against the 'share of profit of associate' line itself, never against consolidated revenue or cost of sales, since the associate was never proportionally consolidated into those lines to begin with).",
+      "EPS is calculated on PARENT-attributable profit only, using the PARENT's own weighted average share count — candidates sometimes mistakenly gross up the share count to include a notional share of Bellhaven's or Corrigan's own shares outstanding, which is meaningless: only Ravensworth's own 40,000,000 shares represent the claims EPS is measuring.",
+      "When multiple adjustments interact (upstream PUP, associate share, NCI), build the workings as separate, clearly labelled, cross-referenced blocks (as shown here) rather than trying to net everything into a single running total — DipIFR markers award workings marks independently of whether the final total is exactly right, so clear, well-labelled workings protect marks even if a single figure is later found to be wrong.",
+    ],
+  },
+
+  // ---------------------------------------------------------
+  // PART C — FOREIGN SUBSIDIARIES: TRANSLATION UNDER IAS 21 (10)
+  // ---------------------------------------------------------
+  {
+    id: "fx-01", part: "FX", difficulty: "Easy", marks: 25, time: 49,
+    title: "Ashvale (presentation currency $) consolidates Bergerac — basic SFP translation of a foreign subsidiary",
+    tags: ["IAS 21", "Closing rate", "Historical rate", "Translation reserve"],
+    scenario: [
+      "Ashvale Co ($ presentation and functional currency) owns 100% of Bergerac Co, whose functional currency is the euro (€). Bergerac was incorporated, and acquired, when the exchange rate was €1 = $1.20.",
+      "Bergerac's statement of financial position at 31 December 20X9 shows: total assets €40,000,000; total liabilities €22,000,000; share capital €6,000,000 (unchanged since incorporation/acquisition); retained earnings €12,000,000.",
+      "Exchange rates: at acquisition (and share capital rate), €1 = $1.20; average rate for the year, €1 = $1.10; closing rate at 31 December 20X9, €1 = $1.05.",
+      "For this question, assume the €12,000,000 retained earnings arose entirely from this year's profit (i.e. Bergerac was acquired at the start of the current year, so there is no brought-forward post-acquisition reserve to translate separately).",
+    ],
+    requirement: "Translate Bergerac's statement of financial position into $ for consolidation, showing the exchange difference arising.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Translation rates applied under IAS 21",
+          rows: [
+            ["Assets and liabilities (all items on the SFP)", "Closing rate: €1 = $1.05"],
+            ["Share capital (and any pre-acquisition reserves)", "Historical/acquisition rate: €1 = $1.20"],
+            ["Profit for the year (flowing into retained earnings)", "Average rate for the year: €1 = $1.10"],
+          ],
+          note: "This is the fundamental IAS 21 rule for translating a foreign operation whose functional currency differs from the group's presentation currency: SFP items at closing rate; equity (share capital, pre-acquisition reserves) at the historical rate ruling when that equity arose; income and expenses (and therefore the profit that flows into retained earnings) at the average rate for the period, as a practical approximation to translating each transaction at its own transaction-date rate.",
+        },
+        {
+          heading: "W2 — Translated statement of financial position",
+          rows: [
+            ["", "€'000", "Rate", "$'000"],
+            ["Total assets", "40,000", "1.05 (closing)", "42,000"],
+            ["Total liabilities", "(22,000)", "1.05 (closing)", "(23,100)"],
+            ["Net assets", "18,000", "", "18,900"],
+          ],
+          isTable: true,
+        },
+        {
+          heading: "W3 — Translated equity and the balancing exchange difference",
+          rows: [
+            ["Share capital: €6,000,000 x 1.20 (historical rate)", "7,200"],
+            ["Retained earnings/profit for the year: €12,000,000 x 1.10 (average rate)", "13,200"],
+            ["Sub-total (translated equity before exchange difference)", "20,400"],
+            ["Net assets translated at closing rate (W2)", "18,900"],
+            ["Exchange difference (balancing figure)", "(1,500)"],
+          ],
+          note: "The exchange difference is always the BALANCING FIGURE needed to make translated equity agree with net assets translated at the closing rate — it is never separately 'calculated' from first principles in a simple question like this; it falls out mechanically once assets/liabilities (closing rate) and equity components (historical/average rates) have each been translated using their own correct rate.",
+        },
+        {
+          heading: "W4 — Presentation of the exchange difference",
+          rows: [
+            ["The (1,500) exchange difference (here, a LOSS since the euro weakened from acquisition/average rates to the closing rate) is recognised in OTHER COMPREHENSIVE INCOME, accumulated within a separate component of equity (often labelled the 'foreign currency translation reserve')", "—"],
+            ["It is NOT recognised in profit or loss for the period — translating a foreign subsidiary's net investment is fundamentally different from an individual monetary transaction denominated in a foreign currency, which WOULD go through profit or loss", "—"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Correctly identify closing rate applies to all SFP assets and liabilities", marks: 4 },
+      { point: "Correctly identify historical rate applies to share capital", marks: 3 },
+      { point: "Correctly identify average rate applies to the year's profit", marks: 3 },
+      { point: "Translated assets and liabilities calculated correctly", marks: 4 },
+      { point: "Translated share capital and retained earnings calculated correctly", marks: 4 },
+      { point: "Exchange difference correctly derived as a balancing figure", marks: 4 },
+      { point: "Correctly state the exchange difference is recognised in OCI, not profit or loss", marks: 3 },
+    ],
+    tricks: [
+      "The exchange difference on translating a foreign subsidiary is a BALANCING FIGURE, not something computed by a separate direct formula — always translate assets/liabilities at closing rate, equity components at their own correct historical/average rates, and let the difference fall out. Trying to 'calculate' it directly from first principles (e.g. multiplying net assets by a rate difference) is fragile and error-prone once multiple equity components with different historical rates are involved.",
+      "This translation exchange difference goes to OTHER COMPREHENSIVE INCOME, never profit or loss — candidates confuse this with the treatment of a foreign currency MONETARY TRANSACTION in an individual entity's own books (e.g. a foreign currency trade receivable), which IS retranslated through profit or loss each period. The two concepts (translating a whole foreign operation vs remeasuring a single monetary item) are governed by different parts of IAS 21 with opposite P/L-vs-OCI outcomes.",
+      "Whether the exchange difference is a gain or a loss purely depends on whether the foreign currency has strengthened or weakened against the presentation currency between the historical/average rates and the closing rate — there's no need to intuit the 'right' sign, just let the balancing mechanic tell you.",
+    ],
+  },
+  {
+    id: "fx-02", part: "FX", difficulty: "Medium", marks: 25, time: 49,
+    title: "Woldsmere acquires Castellane (a euro-functional subsidiary) — goodwill treated as a foreign currency asset, retranslated at each year end",
+    tags: ["IAS 21", "Goodwill in foreign currency", "Retranslation of goodwill"],
+    scenario: [
+      "Woldsmere Co ($ functional/presentation currency) acquired 100% of Castellane Co (€ functional currency) on 1 January 20X8, when the exchange rate was €1 = $1.15. Consideration was €18,000,000; Castellane's identifiable net assets at acquisition were €14,000,000.",
+      "Exchange rates: 1 January 20X8 (acquisition), €1 = $1.15; 31 December 20X8, €1 = $1.10; 31 December 20X9 (current reporting date), €1 = $1.20. No impairment of goodwill has arisen in either year.",
+    ],
+    requirement: "Calculate goodwill in € at acquisition and its translated $ carrying amount at 31 December 20X9, explaining the treatment of the exchange differences arising.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Goodwill calculated in the FOREIGN currency (euro) at acquisition",
+          rows: [
+            ["Consideration transferred", "€18,000,000"],
+            ["Less: net assets at acquisition", "(€14,000,000)"],
+            ["Goodwill in euro", "€4,000,000"],
+          ],
+          note: "Under IAS 21, goodwill arising on the acquisition of a foreign operation is treated as an ASSET OF THE FOREIGN OPERATION itself — it is calculated in the foreign operation's own functional currency (euro here), not in the parent's presentation currency, even though the consideration may actually have been paid in dollars (in which case the cash paid would first be translated into euro at the acquisition-date spot rate to perform this calculation).",
+        },
+        {
+          heading: "W2 — Retranslation of goodwill at each reporting date",
+          rows: [
+            ["Goodwill in € (fixed, since unimpaired)", "€4,000,000"],
+            ["Translated at 31 Dec 20X8 closing rate (1.10): €4,000,000 x 1.10", "$4,400,000"],
+            ["Translated at 31 Dec 20X9 closing rate (1.20): €4,000,000 x 1.20", "$4,800,000"],
+          ],
+          note: "Because goodwill is treated as an asset of the foreign operation, it is retranslated at the CLOSING rate at every subsequent reporting date, exactly like any other asset of Castellane — its dollar-translated carrying amount will therefore fluctuate from year to year purely due to exchange rate movements, even though the underlying euro-denominated goodwill figure never changes (in the absence of impairment).",
+        },
+        {
+          heading: "W3 — Exchange difference on goodwill",
+          rows: [
+            ["Movement in translated goodwill, 31 Dec 20X8 to 31 Dec 20X9: 4,800,000 − 4,400,000", "$400,000 gain"],
+            ["This exchange gain forms part of the overall foreign currency translation reserve movement recognised in OCI for the year, alongside the exchange difference arising on Castellane's own net assets", "—"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Calculate goodwill in the foreign operation's own functional currency (euro), not dollars", marks: 6 },
+      { point: "Explain goodwill is treated as an asset of the foreign operation under IAS 21", marks: 5 },
+      { point: "Retranslate goodwill at the closing rate at each subsequent reporting date", marks: 5 },
+      { point: "Correct translated goodwill figure at 31 December 20X9", marks: 5 },
+      { point: "Recognise the resulting exchange difference is part of the OCI translation reserve movement, not profit or loss", marks: 3 },
+      { point: "Presentation and clarity", marks: 1 },
+    ],
+    tricks: [
+      "A very frequently tested and easily missed rule: goodwill arising on acquiring a foreign operation is itself a FOREIGN CURRENCY ITEM, calculated in the SUBSIDIARY's functional currency and retranslated at the CLOSING rate every year end — it is not fixed in dollar terms at the acquisition-date rate forever, the way many candidates instinctively assume (by analogy with a purely domestic acquisition, where goodwill genuinely is fixed once calculated).",
+      "This retranslation creates a genuine, recurring exchange gain or loss on goodwill every single year purely from currency movements, with no impairment or trading activity involved at all — this can catch out candidates who expect goodwill's carrying amount to only ever change due to impairment.",
+      "If consideration is paid by the parent in ITS OWN currency (dollars) rather than euros, it must first be translated into euros at the acquisition-date spot rate before the goodwill calculation in W1 can be performed in euro terms — goodwill is always ultimately expressed and carried forward in the foreign operation's functional currency.",
+    ],
+  },
+  {
+    id: "fx-03", part: "FX", difficulty: "Medium", marks: 25, time: 49,
+    title: "Marlowick consolidates its Japanese subsidiary Kurokawa — translating the SPL at the average rate",
+    tags: ["IAS 21", "Average rate", "SPL translation", "Retained earnings reconciliation"],
+    scenario: [
+      "Marlowick Co ($ functional currency) owns 100% of Kurokawa Co (¥ functional currency), acquired several years ago. Kurokawa's own statement of profit or loss for the year ended 31 December 20Y0, in yen, shows: revenue ¥900,000,000; cost of sales ¥560,000,000; other expenses ¥140,000,000; tax ¥50,000,000; profit after tax ¥150,000,000.",
+      "Exchange rates: average rate for the year, ¥1 = $0.0072; closing rate at 31 December 20Y0, ¥1 = $0.0068; closing rate at 31 December 20X9 (prior year end, i.e. opening rate for this year), ¥1 = $0.0075.",
+      "Kurokawa's retained earnings at 31 December 20X9 (translated, brought forward from last year's consolidated financial statements) were $650,000.",
+    ],
+    requirement: "Translate Kurokawa's statement of profit or loss for the year and reconcile the movement on translated retained earnings.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Translated statement of profit or loss (all items at the average rate)",
+          rows: [
+            ["", "¥m", "Rate", "$'000"],
+            ["Revenue", "900", "0.0072", "6,480"],
+            ["Cost of sales", "(560)", "0.0072", "(4,032)"],
+            ["Other expenses", "(140)", "0.0072", "(1,008)"],
+            ["Tax", "(50)", "0.0072", "(360)"],
+            ["Profit for the year", "150", "0.0072", "1,080"],
+          ],
+          isTable: true,
+          note: "IAS 21 permits (and DipIFR generally expects, as an acceptable approximation) using a single average rate to translate ALL income and expense items for the period, rather than translating each individual transaction at its own transaction-date rate — this average-rate approach is a practical simplification for the SPL, in contrast to the closing-rate approach used for the SFP.",
+        },
+        {
+          heading: "W2 — Reconciliation of translated retained earnings",
+          rows: [
+            ["Translated retained earnings brought forward at 31 Dec 20X9 (given)", "650"],
+            ["Add: translated profit for the year (W1)", "1,080"],
+            ["Translated retained earnings carried forward at 31 Dec 20Y0 (before any further exchange adjustment)", "1,730"],
+          ],
+          note: "Note carefully: the brought-forward retained earnings figure of $650,000 is NOT retranslated again this year at this year's closing rate — it already represents the translated $ balance as it stood at the END of last year (using last year's own closing rate at that time). Only the CURRENT year's profit needs translating (at the current year's average rate) and adding to that existing $ balance; the brought-forward figure is simply carried forward unchanged in $ terms.",
+        },
+        {
+          heading: "W3 — Why this does not directly reconcile to net assets at the current closing rate",
+          rows: [
+            ["If Kurokawa's translated net assets at 31 December 20Y0 (assets/liabilities at THIS year's closing rate of 0.0068) are compared to translated equity built up as in W2, a further balancing exchange difference will arise and be taken to OCI — this reflects the fact that ALL of Kurokawa's net monetary and non-monetary assets are retranslated at the current closing rate every year, causing the $ value of last year's closing net assets to drift purely due to exchange rate movements between last year's closing rate (0.0075) and this year's closing rate (0.0068), separately from the current year's trading result translated at the average rate", "—"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Recognise the average rate is used for all SPL income and expense items", marks: 4 },
+      { point: "Correctly translate revenue, cost of sales, expenses and tax individually", marks: 6 },
+      { point: "Correctly translated profit for the year", marks: 3 },
+      { point: "Recognise brought-forward retained earnings are NOT retranslated at the current year's rate", marks: 5 },
+      { point: "Correct reconciliation of translated retained earnings b/f + profit for the year", marks: 4 },
+      { point: "Explain the further exchange difference arising on retranslating opening net assets at the new closing rate", marks: 2 },
+      { point: "Presentation and clarity", marks: 1 },
+    ],
+    tricks: [
+      "The single most common error in translating a multi-year foreign subsidiary: retranslating BROUGHT-FORWARD retained earnings at the CURRENT year's rate. The brought-forward $ figure is already fixed, having been correctly translated using LAST year's rates in last year's financial statements — only the CURRENT year's profit needs fresh translation (at this year's average rate) and adding on top.",
+      "Using the average rate for the whole SPL is a practical approximation permitted by IAS 21 — if exchange rates fluctuated significantly during the period, a more precise (transaction-date) translation might be more appropriate, but DipIFR questions almost always expect the straightforward average-rate approach unless told otherwise.",
+      "Do not confuse translating the SPL (average rate, generating a $ profit figure that feeds into equity) with the SEPARATE exchange difference that arises purely from retranslating the SFP's opening net asset position at a NEW closing rate each year — both effects contribute to the overall movement in the foreign currency translation reserve, but they arise from different mechanics and should not be conflated into a single 'translation adjustment' without understanding both pieces.",
+    ],
+  },
+  {
+    id: "fx-04", part: "FX", difficulty: "Medium", marks: 25, time: 49,
+    title: "Standish acquires 75% of Vasterling (a Swiss franc subsidiary) — NCI's share of the foreign currency translation reserve",
+    tags: ["IAS 21", "NCI and translation reserve", "Foreign subsidiary with NCI"],
+    scenario: [
+      "Standish Co ($ functional currency) acquired 75% of Vasterling Co (CHF functional currency) on 1 January 20X8, when the rate was CHF1 = $1.05. NCI was measured at its proportionate share of net assets at acquisition.",
+      "Vasterling's net assets were CHF20,000,000 at acquisition and CHF26,000,000 at 31 December 20X9 (the current reporting date). Closing rate at 31 December 20X9: CHF1 = $0.95. There have been no fair value adjustments and no impairment of goodwill.",
+      "The overall foreign currency translation reserve movement relating to Vasterling's net assets (before splitting between parent and NCI) for cumulative translation since acquisition has been calculated as a cumulative LOSS of $1,600,000, arising because the Swiss franc has weakened against the dollar since acquisition.",
+    ],
+    requirement: "Explain how the cumulative translation reserve relating to Vasterling is split between the parent and non-controlling interest, and calculate NCI's share.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Principle: NCI shares in the translation reserve in its ownership proportion",
+          rows: [
+            ["Exactly as NCI shares in the SUBSIDIARY's post-acquisition retained earnings/net asset movement in its ownership percentage, NCI also shares in the CUMULATIVE FOREIGN CURRENCY TRANSLATION RESERVE relating to that same subsidiary, in the same ownership proportion — the translation reserve is, after all, simply another component of the subsidiary's total equity that both parent and NCI have an economic interest in", "—"],
+          ],
+        },
+        {
+          heading: "W2 — Split of the cumulative translation loss",
+          rows: [
+            ["Total cumulative translation loss relating to Vasterling", "$(1,600,000)"],
+            ["Attributable to NCI: 25% x 1,600,000", "$(400,000)"],
+            ["Attributable to owners of the parent: 75% x 1,600,000", "$(1,200,000)"],
+          ],
+        },
+        {
+          heading: "W3 — Presentation",
+          rows: [
+            ["The parent's 75% share of the translation loss reduces the group's own foreign currency translation reserve (a component of equity attributable to owners of the parent) within other comprehensive income", "—"],
+            ["NCI's 25% share reduces the non-controlling interest balance in the consolidated statement of financial position directly (NCI is presented as a single aggregate total in the consolidated SFP, inclusive of its share of ALL reserves relating to the subsidiary — retained earnings, translation reserve, revaluation reserve, etc. — not just retained earnings)", "—"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Recognise NCI shares in ALL components of the subsidiary's equity, not just retained earnings", marks: 6 },
+      { point: "Apply NCI's ownership percentage to the cumulative translation reserve movement", marks: 6 },
+      { point: "Correct NCI share calculated (25% x 1,600,000)", marks: 4 },
+      { point: "Correct parent share calculated (75% x 1,600,000)", marks: 3 },
+      { point: "Explain presentation: parent share to group OCI/translation reserve, NCI share within the NCI balance", marks: 5 },
+      { point: "Presentation and clarity", marks: 1 },
+    ],
+    tricks: [
+      "A very commonly missed principle: NCI does not only share in a subsidiary's RETAINED EARNINGS — it shares in EVERY component of the subsidiary's equity in its ownership proportion, including the foreign currency translation reserve, any revaluation surplus, and any other reserves. A question that only calculates NCI's share of retained earnings while ignoring its share of the translation reserve understates NCI (or overstates the parent's share of OCI) whenever a foreign subsidiary with NCI is involved.",
+      "The NON-CONTROLLING INTEREST line on the consolidated SFP is a single aggregate total representing NCI's whole economic interest in the subsidiary's net assets — it is not broken down on the face of the SFP into 'NCI share of retained earnings' and 'NCI share of translation reserve' separately, even though those components conceptually make it up.",
+      "Whether the translation movement is a gain or a loss doesn't change the mechanics of the split — NCI simply takes its ownership percentage of whatever the cumulative translation reserve movement turns out to be, positive or negative.",
+    ],
+  },
+  {
+    id: "fx-05", part: "FX", difficulty: "Hard", marks: 25, time: 49,
+    title: "Oakenfield acquires Trevanion (a Canadian-dollar subsidiary) mid-year — goodwill and post-acquisition movement in a foreign currency",
+    tags: ["IAS 21", "Mid-year acquisition", "Foreign currency goodwill", "Post-acquisition movement"],
+    scenario: [
+      "Oakenfield Co ($ functional currency) acquired 100% of Trevanion Co (CAD functional currency) on 1 July 20X9 for CAD 24,000,000. Trevanion's identifiable net assets at acquisition were CAD 19,000,000. Oakenfield's year end is 31 December 20X9.",
+      "Trevanion's net assets at 31 December 20X9 were CAD 21,500,000 (post-acquisition profit for the 6-month period of CAD 2,500,000, accruing evenly).",
+      "Exchange rates: 1 July 20X9 (acquisition), CAD1 = $0.74; average rate for the post-acquisition period (1 Jul–31 Dec 20X9), CAD1 = $0.72; closing rate at 31 December 20X9, CAD1 = $0.70. No impairment of goodwill has arisen.",
+    ],
+    requirement: "Calculate goodwill in CAD at acquisition, its translated $ carrying amount at 31 December 20X9, and the translated post-acquisition movement in Trevanion's net assets for inclusion in consolidated retained earnings.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Goodwill in CAD at acquisition",
+          rows: [
+            ["Consideration transferred", "CAD 24,000,000"],
+            ["Less: net assets at acquisition", "(CAD 19,000,000)"],
+            ["Goodwill in CAD", "CAD 5,000,000"],
+          ],
+        },
+        {
+          heading: "W2 — Goodwill translated at the closing rate, 31 December 20X9",
+          rows: [
+            ["Goodwill in CAD (unimpaired)", "CAD 5,000,000"],
+            ["Translated at closing rate: CAD 5,000,000 x 0.70", "$3,500,000"],
+          ],
+        },
+        {
+          heading: "W3 — Post-acquisition movement in Trevanion's net assets, translated",
+          rows: [
+            ["Post-acquisition profit in CAD (6 months): CAD 2,500,000", "—"],
+            ["Translated at the AVERAGE rate for the post-acquisition period: CAD 2,500,000 x 0.72", "$1,800,000"],
+          ],
+          note: "This $1,800,000 is the figure that is added to Oakenfield's own retained earnings on consolidation (100% owned, no NCI) — it represents Trevanion's post-acquisition trading profit translated using the same average-rate approach as any foreign subsidiary's SPL, restricted here to only the post-acquisition part of the year exactly as with a purely domestic mid-year acquisition.",
+        },
+        {
+          heading: "W4 — Net assets of Trevanion at acquisition and reporting date, translated, for the exchange difference calculation",
+          rows: [
+            ["", "CAD'000", "Rate", "$'000"],
+            ["Net assets at acquisition (1 Jul 20X9)", "19,000", "0.74 (acquisition rate)", "14,060"],
+            ["Post-acquisition profit (W3)", "2,500", "0.72 (average)", "1,800"],
+            ["Sub-total: expected net assets at reporting date, translated", "21,500", "", "15,860"],
+            ["Net assets at reporting date translated at CLOSING rate: 21,500,000 x 0.70", "21,500", "0.70 (closing)", "15,050"],
+            ["Exchange difference (balancing figure): 15,050 − 15,860", "", "", "(810)"],
+          ],
+          isTable: true,
+          note: "This exchange difference of $(810,000) relates purely to translating Trevanion's OWN net assets and goes to OCI as part of the group's translation reserve — it is entirely separate from, and in addition to, the exchange movement on GOODWILL itself (see W2), which is tracked and translated independently because goodwill is conceptually a distinct asset of the foreign operation.",
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Goodwill correctly calculated in CAD (foreign currency) at acquisition", marks: 3 },
+      { point: "Goodwill correctly translated at the closing rate for the reporting date", marks: 3 },
+      { point: "Recognise only 6 months' post-acquisition profit is relevant", marks: 3 },
+      { point: "Post-acquisition profit translated at the average rate for the post-acquisition period specifically (not the full year)", marks: 5 },
+      { point: "Net assets at acquisition translated at the acquisition-date rate", marks: 3 },
+      { point: "Net assets at reporting date translated at the closing rate", marks: 3 },
+      { point: "Exchange difference correctly derived as a balancing figure, separate from the goodwill exchange movement", marks: 4 },
+      { point: "Presentation and clarity", marks: 1 },
+    ],
+    tricks: [
+      "A mid-year acquisition of a FOREIGN subsidiary combines two separate 'time-slicing' concepts that must both be applied correctly: (1) only the POST-acquisition period's results are consolidated at all (as with any mid-year acquisition), and (2) that post-acquisition profit must be translated using the AVERAGE RATE FOR THE POST-ACQUISITION PERIOD SPECIFICALLY — not the full-year average rate, and not the closing rate.",
+      "Goodwill and the subsidiary's underlying net assets are translated and tracked SEPARATELY for exchange-difference purposes — goodwill uses the closing rate applied to the fixed CAD goodwill figure (translated fresh each year), while the net assets' exchange difference is derived as a balancing figure comparing translated acquisition-date net assets plus translated post-acquisition profit against net assets retranslated wholesale at the closing rate.",
+      "Always translate the ACQUISITION-DATE net assets at the RATE RULING AT ACQUISITION (here 0.74), not the average or closing rate — this is analogous to translating share capital at the historical rate, since the acquisition-date net asset figure represents the group's opening equity interest in the foreign operation.",
+    ],
+  },
+  {
+    id: "fx-06", part: "FX", difficulty: "Hard", marks: 25, time: 49,
+    title: "Penhaligon disposes of its foreign subsidiary Almeira — recycling the cumulative translation reserve to profit or loss",
+    tags: ["IAS 21", "Disposal of foreign operation", "Recycling OCI", "Gain on disposal"],
+    scenario: [
+      "Penhaligon Co ($ functional currency) sold its entire 100% holding in Almeira Co (a foreign operation, MXN functional currency) on 30 June 20Y1 for cash proceeds of $22,000,000.",
+      "At the date of disposal, the translated (dollar) carrying amounts were: Almeira's net assets $17,500,000; unimpaired goodwill $2,300,000.",
+      "A cumulative foreign currency translation reserve balance of $1,900,000 (a cumulative GAIN, i.e. a credit balance, reflecting the Mexican peso having strengthened against the dollar since acquisition) had built up in equity relating specifically to Almeira over the period the group held it.",
+    ],
+    requirement: "Calculate the group gain or loss on disposal, explaining the treatment of the cumulative translation reserve.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Basic disposal calculation (before considering the translation reserve)",
+          rows: [
+            ["Proceeds", "22,000,000"],
+            ["Less: net assets at disposal date", "(17,500,000)"],
+            ["Less: goodwill at disposal date", "(2,300,000)"],
+            ["Add back: NCI derecognised (100% owned — nil NCI here)", "-"],
+            ["Gain before considering the translation reserve", "2,200,000"],
+          ],
+        },
+        {
+          heading: "W2 — Recycling the cumulative translation reserve",
+          rows: [
+            ["On disposal of a foreign operation resulting in loss of control, IAS 21 requires the CUMULATIVE amount of the foreign currency translation reserve relating to that foreign operation to be RECLASSIFIED ('recycled') from OCI/equity into PROFIT OR LOSS as part of the gain or loss on disposal", "—"],
+            ["Cumulative translation reserve relating to Almeira (a cumulative GAIN)", "1,900,000"],
+          ],
+        },
+        {
+          heading: "W3 — Total gain on disposal recognised in profit or loss",
+          rows: [
+            ["Gain before considering the translation reserve (W1)", "2,200,000"],
+            ["Add: cumulative translation reserve recycled from equity", "1,900,000"],
+            ["Total gain on disposal recognised in profit or loss", "4,100,000"],
+          ],
+          note: "Recycling means the amount previously sitting in OCI/equity is REMOVED from equity (Dr Translation reserve 1,900,000) and added to the gain recognised in profit or loss (Cr Profit or loss 1,900,000) — it is not created 'from nothing'; it is simply reclassified from one part of the financial statements to another, ensuring the FULL economic gain the group has made on this investment over its whole life (including favourable currency movements) is ultimately recognised in profit or loss at the point it is realised through sale.",
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Calculate the basic gain on disposal (proceeds less net assets and goodwill)", marks: 5 },
+      { point: "Recognise the cumulative translation reserve must be recycled to profit or loss on disposal", marks: 6 },
+      { point: "Correctly identify the amount to be recycled", marks: 4 },
+      { point: "Correct total gain on disposal including the recycled amount", marks: 5 },
+      { point: "Explain the recycling mechanic (reclassification from equity to P/L, not a new gain created)", marks: 4 },
+      { point: "Presentation and clarity", marks: 1 },
+    ],
+    tricks: [
+      "Recycling (reclassification) of the cumulative translation reserve on disposal of a foreign operation is one of the most commonly forgotten steps in this whole area — candidates correctly calculate the 'ordinary' disposal gain (proceeds less net assets and goodwill) but forget that YEARS of accumulated OCI gains or losses relating specifically to that foreign operation must ALSO be swept into the disposal gain/loss calculation at the point control is lost.",
+      "This recycling only happens on a disposal that results in LOSS OF CONTROL (or loss of significant influence/joint control, for an associate/joint venture) — a PARTIAL disposal that retains control does not trigger recycling of the cumulative translation reserve; only the parent's own attributable share of ongoing OCI movements continues as before, with the reserve balance simply reallocated between parent and NCI in their new post-disposal ownership proportions.",
+      "The direction of the effect depends on whether the cumulative reserve is a gain (credit) or a loss (debit) — a cumulative LOSS recycled to profit or loss would REDUCE the gain on disposal (or increase a loss), the mirror image of this example's cumulative gain increasing the gain on disposal.",
+    ],
+  },
+  {
+    id: "fx-07", part: "FX", difficulty: "Medium", marks: 25, time: 49,
+    title: "Wrenfield's own foreign currency trade payable to its Brazilian subsidiary Itaguai — distinguishing transaction retranslation from operation translation",
+    tags: ["IAS 21", "Monetary item retranslation", "Transaction vs translation", "P/L vs OCI"],
+    scenario: [
+      "Wrenfield Co ($ functional currency) owns 100% of Itaguai Co (BRL functional currency). During the year ended 31 December 20X8, Wrenfield purchased goods from Itaguai for BRL 6,000,000 on credit, recording the transaction in its own individual (dollar) financial statements at the spot rate on the transaction date, BRL1 = $0.19 (i.e. $1,140,000).",
+      "At 31 December 20X8, the payable remained unsettled. The closing rate at the year end was BRL1 = $0.17.",
+      "Separately, Itaguai's own financial statements (prepared in BRL) are translated for consolidation using the closing rate for the SFP and the average rate for the SPL, as normal for a foreign operation.",
+    ],
+    requirement: "Explain and calculate the accounting for (a) Wrenfield's own foreign currency payable at the year end, and (b) how this differs from the translation of Itaguai's financial statements as a whole.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Retranslation of Wrenfield's OWN monetary item (the trade payable)",
+          rows: [
+            ["Payable recorded at transaction date: BRL 6,000,000 x 0.19", "$1,140,000"],
+            ["Payable retranslated at the closing rate: BRL 6,000,000 x 0.17", "$1,020,000"],
+            ["Exchange gain (the $ value of the liability has fallen as the real weakened): 1,140,000 − 1,020,000", "$120,000 gain"],
+          ],
+          note: "Under IAS 21, a foreign currency MONETARY ITEM (cash, receivables, payables — anything ultimately settled in a fixed or determinable number of currency units) held by an individual entity is retranslated at the CLOSING rate at each reporting date, with the resulting exchange difference recognised immediately in PROFIT OR LOSS for the period — this is a completely different mechanic from translating a whole foreign subsidiary's financial statements.",
+        },
+        {
+          heading: "W2 — Contrast with translating Itaguai's financial statements as a whole",
+          rows: [
+            ["Itaguai's own SFP items (its OWN assets and liabilities, including any payables/receivables IT holds) are translated at the closing rate too, for consolidation purposes — but the resulting exchange difference on translating Itaguai's NET ASSETS as a whole (i.e. the net investment in a foreign operation) goes to OCI/equity, not profit or loss", "—"],
+            ["Itaguai's income and expenses are translated at the average rate for the SPL, again feeding into the OCI-based translation reserve mechanic (via the balancing figure), rather than generating direct profit-or-loss exchange gains/losses transaction by transaction", "—"],
+          ],
+        },
+        {
+          heading: "W3 — Why the intra-group payable in W1 is a P/L item for Wrenfield individually, despite being eliminated on consolidation",
+          rows: [
+            ["Wrenfield's $120,000 exchange gain is a genuine result of WRENFIELD's OWN individual transaction being denominated in a foreign currency — it is recognised in Wrenfield's own individual financial statements' profit or loss for the year", "—"],
+            ["On CONSOLIDATION, the intra-group PAYABLE/RECEIVABLE BALANCE itself is eliminated in full (Dr Payables / Cr Receivables) as with any other intra-group balance — but the $120,000 exchange gain Wrenfield already recognised in ITS OWN profit or loss for the year is NOT reversed or eliminated; it remains part of consolidated profit, because it reflects a genuine economic gain the group experienced from having an unsettled intra-group balance exposed to currency movements", "—"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Recognise the trade payable is a monetary item requiring retranslation at the closing rate", marks: 4 },
+      { point: "Correctly retranslate the payable and calculate the exchange gain", marks: 4 },
+      { point: "Recognise this exchange gain is recognised in Wrenfield's own profit or loss", marks: 4 },
+      { point: "Contrast correctly with the OCI treatment of translating Itaguai's financial statements as a whole", marks: 5 },
+      { point: "Explain that the intra-group BALANCE is eliminated on consolidation but the exchange GAIN already recognised is not reversed", marks: 6 },
+      { point: "Clarity of the transaction-vs-translation distinction throughout", marks: 2 },
+    ],
+    tricks: [
+      "This question isolates a genuinely tricky conceptual distinction that DipIFR frequently tests: retranslating an individual foreign-currency MONETARY TRANSACTION (a receivable, payable, loan) goes through PROFIT OR LOSS, while translating an entire foreign OPERATION's financial statements (net investment) for consolidation goes through OTHER COMPREHENSIVE INCOME. Both use 'IAS 21' and both often use a 'closing rate', which is precisely why candidates conflate them — but the underlying nature of what's being translated (a transaction vs a net investment) determines where the resulting difference lands.",
+      "On consolidation, intra-group monetary balances are eliminated in full regardless of any exchange gains/losses individually recognised on them beforehand — do NOT reverse or 'undo' Wrenfield's own already-recognised $120,000 exchange gain just because the underlying balance is eliminated; the elimination only removes the BALANCE (asset and liability), not any profit or loss that has already crystallised through the individual entity's own accounting for the period.",
+      "If the intra-group balance were instead a LOAN considered to form part of the NET INVESTMENT in a foreign operation (i.e. settlement is neither planned nor likely in the foreseeable future — an unusual, specific IAS 21 category), the exchange difference on THAT particular type of intra-group loan would instead be recognised in OCI on consolidation, not profit or loss — always check whether an intra-group monetary item is a straightforward trading balance (P/L exchange differences) or genuinely forms part of the net investment in the foreign operation (OCI exchange differences) before applying the general rule.",
+    ],
+  },
+  {
+    id: "fx-08", part: "FX", difficulty: "Medium", marks: 25, time: 49,
+    title: "Halliday holds 35% of Montcalm, a Norwegian-krone associate — equity method combined with foreign currency translation",
+    tags: ["IAS 21", "Foreign associate", "Equity method", "Translation"],
+    scenario: [
+      "Halliday Co ($ functional currency) holds 35% of Montcalm Co (NOK functional currency), an associate acquired some years ago. The carrying amount of the investment, translated into $, was $8,200,000 at 31 December 20X8 (the prior year end).",
+      "Montcalm's profit after tax for the year ended 31 December 20X9 was NOK 18,000,000. Montcalm paid no dividend during the year.",
+      "Exchange rates: average rate for the year, NOK1 = $0.095; closing rate at 31 December 20X9, NOK1 = $0.090; closing rate at 31 December 20X8, NOK1 = $0.098.",
+    ],
+    requirement: "Calculate the carrying amount of the investment in the associate at 31 December 20X9 and explain the treatment of any exchange difference arising.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Share of associate's profit for the year, translated at the average rate",
+          rows: [
+            ["Halliday's share of Montcalm's profit: 35% x NOK 18,000,000", "NOK 6,300,000"],
+            ["Translated at the average rate for the year: NOK 6,300,000 x 0.095", "$598,500"],
+          ],
+          note: "Just as with a foreign subsidiary's SPL, the group's share of a foreign associate's profit is translated using the AVERAGE rate for the period — this is the figure that is added, via the single 'share of profit of associate' line, to consolidated profit for the year.",
+        },
+        {
+          heading: "W2 — Carrying amount before considering the retranslation exchange difference",
+          rows: [
+            ["Carrying amount brought forward at 31 Dec 20X8 (already translated $ figure, not retranslated again)", "$8,200,000"],
+            ["Add: share of profit for the year, translated (W1)", "$598,500"],
+            ["Carrying amount before further exchange adjustment", "$8,798,500"],
+          ],
+        },
+        {
+          heading: "W3 — Exchange difference on retranslating the investment itself",
+          rows: [
+            ["Just as the parent's net investment in a foreign SUBSIDIARY is retranslated (via its net assets) at the closing rate each year, the carrying amount of an investment in a foreign ASSOCIATE is also, in substance, subject to a retranslation exchange difference — because the underlying net assets of Montcalm that the equity-accounted carrying amount represents are themselves foreign-currency denominated and exposed to exchange rate movements between the average rate used for this year's profit and the closing rate at which the underlying investment is effectively measured", "—"],
+            ["This further exchange difference (the balancing effect of the krone weakening from 0.098 to 0.090 over the year, partially offset by the profit being picked up at the mid-year average rate of 0.095) is recognised in OTHER COMPREHENSIVE INCOME, consistent with the OCI treatment applied to translating a foreign subsidiary's net assets", "—"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Calculate the group's share of the associate's profit in the foreign currency (krone)", marks: 4 },
+      { point: "Translate the share of profit at the average rate for the year", marks: 5 },
+      { point: "Recognise brought-forward carrying amount is not retranslated, only carried forward", marks: 4 },
+      { point: "Correct carrying amount before the further exchange adjustment", marks: 4 },
+      { point: "Recognise a further translation-related exchange difference arises on the investment itself", marks: 5 },
+      { point: "Correctly identify OCI as the destination for this exchange difference", marks: 2 },
+      { point: "Presentation and clarity", marks: 1 },
+    ],
+    tricks: [
+      "The equity method for a foreign associate combines two sets of rules that must both be applied: the ordinary equity-accounting mechanic (cost plus share of post-acquisition profit, one-line presentation) AND the foreign currency translation mechanic (average rate for the period's share of profit, closing-rate-equivalent exposure on the underlying net investment, with translation differences to OCI) — treating a foreign associate as if it were a purely domestic one and ignoring translation effects entirely is a common oversimplification.",
+      "As with a foreign subsidiary, brought-forward carrying amounts are NOT reretranslated at the current year's rates — only the CURRENT year's share of profit needs fresh translation (at the current year's average rate), added to the existing $ carrying amount already established using PRIOR years' rates.",
+      "The exchange difference relating to a foreign associate is recognised in OCI, consistent with the treatment for a foreign subsidiary's net assets — this reinforces the general IAS 21 principle that translating any NET INVESTMENT in a foreign operation (whether a subsidiary, associate, or joint venture) generates OCI exchange differences, distinct from the profit-or-loss treatment reserved for individual foreign currency MONETARY TRANSACTIONS.",
+    ],
+  },
+  {
+    id: "fx-09", part: "FX", difficulty: "Medium", marks: 25, time: 49,
+    title: "Brightwater's subsidiary Oleander — determining functional currency where indicators conflict",
+    tags: ["IAS 21", "Functional currency determination", "Indicators", "Discursive"],
+    scenario: [
+      "Brightwater Co ($ functional currency) owns 100% of Oleander Co, incorporated in a country whose local currency is the peso. Management has always assumed Oleander's functional currency is the peso (matching its country of incorporation) and has translated its financial statements accordingly using the closing-rate/average-rate method for consolidation.",
+      "However, on review, the following facts are noted about Oleander: (i) over 90% of its sales are invoiced and settled in $, to customers primarily in Brightwater's home market; (ii) its major cost inputs (raw materials) are priced in $ on world markets, though paid locally; (iii) it is financed almost entirely by intra-group $ loans from Brightwater, with minimal local-currency borrowing; (iv) its day-to-day retained earnings are, however, accumulated and distributed in local peso terms, and its workforce and premises are entirely local.",
+    ],
+    requirement: "Explain, applying the IAS 21 indicators, whether the peso or the $ is more likely to be Oleander's functional currency, and the consequence of a change in conclusion for the financial statements.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Primary indicators under IAS 21 (given greatest weight)",
+          rows: [
+            ["(a) The currency that mainly influences sales prices for goods and services (often the currency in which sales prices are denominated and settled)", "Points to $ — sales are invoiced and settled in $"],
+            ["(b) The currency of the country whose competitive forces and regulations mainly determine sales prices", "Points to $ — customers and competitive pricing pressure are in Brightwater's home ($ ) market"],
+            ["(c) The currency that mainly influences labour, material and other costs of providing goods/services", "Mixed — material costs are $-denominated even though paid locally; labour costs are local/peso"],
+          ],
+          note: "IAS 21 identifies these SALES-side and cost-side indicators as PRIMARY, to be considered first and given the most weight in the functional currency assessment.",
+        },
+        {
+          heading: "W2 — Secondary indicators (considered to provide additional supporting evidence)",
+          rows: [
+            ["(d) The currency in which funds from financing activities are generated", "Points to $ — financed almost entirely by intra-group $ loans"],
+            ["(e) The currency in which receipts from operating activities are usually retained", "Points to peso — retained earnings accumulated/distributed in local peso terms"],
+          ],
+        },
+        {
+          heading: "W3 — Overall conclusion",
+          rows: [
+            ["On balance, the PRIMARY indicators (sales pricing/settlement currency and, partially, cost currency) together with the FINANCING indicator all point strongly towards the $ being Oleander's functional currency, despite it being locally incorporated, staffed and despite retained earnings being accumulated in local currency terms", "—"],
+            ["Local incorporation, a local workforce, and local premises are NOT determinative indicators of functional currency under IAS 21 — they simply describe where an entity is based, which is a separate question from which currency's economic environment primarily drives its cash flows, pricing and financing", "—"],
+          ],
+        },
+        {
+          heading: "W4 — Consequence of concluding the functional currency is $ (a change from management's prior assumption)",
+          rows: [
+            ["If Oleander's functional currency is actually the $ (the SAME as Brightwater's), Oleander's own financial statements should be prepared and maintained directly in $ using normal IAS 21 transaction/monetary-item principles — NOT translated using the closing-rate/average-rate method as if it were a genuinely foreign operation with a different functional currency", "—"],
+            ["This is a fundamentally different accounting treatment: no foreign currency translation reserve would arise at all in respect of Oleander, because from a functional-currency perspective there is no 'foreign operation' translation exercise required — Oleander's peso-denominated transactions and balances would instead need to be treated as foreign-currency ITEMS within Oleander's own ($-functional) accounting records, remeasured through PROFIT OR LOSS as monetary items, rather than the whole entity being translated with differences to OCI", "—"],
+            ["A change of this nature would represent a correction of an error in the assessment of functional currency (assuming the underlying facts existed throughout and were simply misjudged), requiring retrospective restatement under IAS 8, rather than a change to be applied prospectively only", "—"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Correctly identify and apply the primary sales-price indicator", marks: 3 },
+      { point: "Correctly identify and apply the primary cost indicator", marks: 3 },
+      { point: "Correctly identify and apply the financing indicator", marks: 3 },
+      { point: "Correctly identify and apply the retained-earnings indicator", marks: 2 },
+      { point: "Explain that local incorporation/workforce/premises are not determinative", marks: 4 },
+      { point: "Reach and justify an overall conclusion weighing the (sometimes conflicting) indicators", marks: 4 },
+      { point: "Explain the consequence: no closing/average rate translation if functional currency matches the parent's", marks: 4 },
+      { point: "Explain the correction-of-error/retrospective restatement consequence under IAS 8", marks: 2 },
+    ],
+    tricks: [
+      "This is a deliberately discursive, judgement-based question of the type DipIFR increasingly favours — there is no single 'correct' numeric answer; marks are awarded for correctly IDENTIFYING and APPLYING the IAS 21 indicators (weighting primary sales/cost indicators above secondary financing/retained-earnings indicators) and reaching a well-reasoned conclusion, not for guessing the 'right' currency.",
+      "A very common misconception is that functional currency is simply the currency of the country of incorporation, or wherever the entity's staff and premises are located — IAS 21 explicitly looks past these superficial factors to the underlying economic environment that PRIMARILY drives the entity's cash flows, pricing, and financing.",
+      "If functional currency has been mis-assessed and needs correcting, the consequence is not simply 'translate differently going forward' — getting the functional currency wrong means an entirely different accounting model (direct transaction/monetary-item accounting in the true functional currency, rather than closing/average rate translation of a supposedly 'foreign' operation) should have applied throughout, which is a matter for retrospective correction of a prior period error under IAS 8, not a prospective change in accounting policy or estimate.",
+    ],
+  },
+  {
+    id: "fx-10", part: "FX", difficulty: "Hard", marks: 25, time: 49,
+    title: "Farringdon consolidates Zabranek — goodwill impairment in a foreign currency and upstream PUP, both requiring translation",
+    tags: ["IAS 21", "Goodwill impairment in FC", "PUP in foreign subsidiary", "Comprehensive"],
+    scenario: [
+      "Farringdon Co ($ functional currency) owns 80% of Zabranek Co (PLN — Polish zloty — functional currency), acquired several years ago. Goodwill in PLN at acquisition (fair value method for NCI) was PLN 12,000,000, unimpaired until this year.",
+      "During the year ended 31 December 20Y1, an impairment review (performed in PLN, the functional currency of the cash-generating unit) identified that PLN 3,000,000 of this goodwill is impaired.",
+      "Separately, during the year, Zabranek sold goods to Farringdon for PLN 5,000,000 at a margin of 20% on selling price; 50% of these goods remained in Farringdon's inventory (translated into $) at the year end.",
+      "Exchange rates: average rate for the year, PLN1 = $0.26; closing rate at 31 December 20Y1, PLN1 = $0.24.",
+    ],
+    requirement: "Calculate (a) the $ goodwill impairment charge for the year and the $ carrying amount of goodwill at 31 December 20Y1, and (b) the $ unrealised profit adjustment required in respect of the intra-group inventory, together with its effect on the non-controlling interest.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Goodwill impairment, performed and initially measured in PLN",
+          rows: [
+            ["Goodwill in PLN before impairment", "PLN 12,000,000"],
+            ["Impairment identified (measured in PLN, the functional currency of the CGU)", "(PLN 3,000,000)"],
+            ["Goodwill in PLN after impairment", "PLN 9,000,000"],
+          ],
+          note: "The impairment REVIEW itself is performed in the functional currency of the cash-generating unit (PLN) — comparing the PLN carrying amount of goodwill (plus the related assets of the CGU) against the PLN recoverable amount — because recoverable amount is inherently a function of the CGU's own local cash flows, most naturally assessed in its own functional currency.",
+        },
+        {
+          heading: "W2 — Translating the impairment charge and resulting goodwill carrying amount",
+          rows: [
+            ["Impairment charge for the year, translated at the AVERAGE rate (as it is a 'flow' item impacting profit or loss during the period, consistent with how other SPL items are translated): PLN 3,000,000 x 0.26", "$780,000 (charged to consolidated profit or loss)"],
+            ["Goodwill carrying amount at 31 December 20Y1, translated at the CLOSING rate (as it is an SFP 'stock' item): PLN 9,000,000 x 0.24", "$2,160,000"],
+          ],
+          note: "Note the impairment EXPENSE and the resulting CLOSING carrying amount are translated using DIFFERENT rates (average for the flow through profit or loss; closing for the year-end balance) — consistent with the general principle that SPL flows use the average rate while SFP balances use the closing rate. The residual difference between (goodwill in $ b/f, less the $780,000 impairment charge) and the $2,160,000 closing translated balance falls into the overall foreign currency translation reserve movement for the year, exactly like the exchange difference on Zabranek's other net assets.",
+        },
+        {
+          heading: "W3 — Unrealised profit on intra-group inventory (upstream — Zabranek is seller), calculated in PLN",
+          rows: [
+            ["Goods remaining in inventory: 50% x PLN 5,000,000", "PLN 2,500,000"],
+            ["Margin of 20% on selling price", "20%"],
+            ["Unrealised profit in PLN", "PLN 500,000"],
+          ],
+          note: "The unrealised profit is first calculated in the functional currency in which the underlying transaction actually took place (PLN, Zabranek's functional currency, since Zabranek is the seller and the sale would naturally have been invoiced/recorded in its own functional currency) — only then is it translated for consolidation purposes.",
+        },
+        {
+          heading: "W4 — Translating the PUP adjustment",
+          rows: [
+            ["Unrealised profit in PLN (a P/L-type adjustment reducing this year's group profit, hence translated at the AVERAGE rate consistent with other SPL/profit-impacting adjustments)", "PLN 500,000"],
+            ["Translated at the average rate: PLN 500,000 x 0.26", "$130,000"],
+          ],
+          note: "This $130,000 reduces consolidated cost of sales... i.e. increases consolidated cost of sales/reduces group profit for the year, and — because Zabranek (the subsidiary) is the seller (upstream) — also reduces Zabranek's profit for the purposes of calculating NCI's share.",
+        },
+        {
+          heading: "W5 — Effect on non-controlling interest",
+          rows: [
+            ["NCI's share of BOTH the upstream PUP adjustment (W4) and its share of the goodwill impairment (W2) are affected, because (i) the fair value method was used for NCI at acquisition, meaning goodwill impairment is shared, and (ii) the PUP is upstream, meaning it reduces Zabranek's own profit before the NCI split", "—"],
+            ["NCI share of PUP: 20% x $130,000", "$(26,000)"],
+            ["NCI share of goodwill impairment: 20% x $780,000", "$(156,000)"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Perform the goodwill impairment review in the CGU's own functional currency (PLN)", marks: 3 },
+      { point: "Translate the impairment charge (a flow) at the average rate", marks: 4 },
+      { point: "Translate the resulting goodwill carrying amount (a balance) at the closing rate", marks: 4 },
+      { point: "Calculate the unrealised profit in the transaction's own functional currency (PLN) first", marks: 3 },
+      { point: "Translate the PUP adjustment at the average rate, consistent with other profit-impacting items", marks: 4 },
+      { point: "Correctly identify upstream nature affecting NCI via Zabranek's profit", marks: 2 },
+      { point: "Correctly identify fair value method meaning NCI shares in the goodwill impairment", marks: 3 },
+      { point: "Correct NCI share calculations for both the PUP and the impairment", marks: 2 },
+    ],
+    tricks: [
+      "This question combines foreign currency translation mechanics with two 'ordinary' consolidation adjustments (goodwill impairment allocation and upstream PUP) to test whether candidates can correctly decide WHICH RATE to use for each translated figure: 'flow' items impacting profit or loss for the period (impairment charge, PUP adjustment) use the AVERAGE rate; 'stock'/balance items on the SFP (closing goodwill carrying amount) use the CLOSING rate — mixing these up is the central risk this question is designed to probe.",
+      "Always perform impairment reviews and calculate unrealised profits in the FUNCTIONAL CURRENCY in which the underlying transaction or cash-generating unit actually operates, and only translate the RESULT into the presentation currency afterwards — trying to translate the underlying inputs (e.g. individual asset carrying amounts and recoverable amount cash flow forecasts) into dollars first and then perform the impairment test in dollars can, in principle applied loosely, produce a different (incorrect) answer, since dollar exchange rates can move independently of the CGU's own local economic impairment indicators.",
+      "The 'usual' consolidation rules for whether NCI shares in an adjustment (fair value method vs proportionate share method for goodwill; upstream vs downstream for PUP) apply EXACTLY as normal even when foreign currency translation is layered on top — the currency translation step does not change WHETHER NCI is affected by an adjustment, only the CURRENCY/RATE used to express the $ amount of that effect.",
+    ],
+  },
+
+  // ---------------------------------------------------------
+  // PART D — MOCK EXAM Q1-STYLE (50 marks, combined CSFP + CSPL)
+  // ---------------------------------------------------------
+  {
+    id: "mock-01", part: "MOCK", difficulty: "Very Hard", marks: 50, time: 98,
+    title: "Kestrel Group — full 50-mark Q1: consolidated SFP and extract SPL, combining acquisition, FV uplift, PUP, associate and NCI",
+    tags: ["Comprehensive", "CSFP", "CSPL extract", "Goodwill", "FV adjustment", "PUP", "Associate", "NCI", "Q1-style"],
+    scenario: [
+      "Kestrel Co acquired 75% of the equity shares of Marrowfen Co on 1 April 20X8 for cash consideration of $54,000,000. Kestrel's year end is 31 December 20X8.",
+      "At acquisition, Marrowfen's share capital was $15,000,000 and retained earnings were $34,000,000. Fair value of the 25% non-controlling interest at acquisition was $16,500,000.",
+      "At acquisition, Marrowfen's plant had a carrying amount of $12,000,000 and a fair value of $16,000,000, with a remaining useful life of 8 years at that date. No adjustment for this has been made in Marrowfen's own financial statements.",
+      "Kestrel also holds 30% of Silverdene Co, an associate acquired several years ago, equity-accounted, with a carrying amount at 1 January 20X8 of $9,400,000. Silverdene's profit after tax for the year ended 31 December 20X8 was $3,000,000, accruing evenly; it paid no dividend.",
+      "During the post-acquisition period, Marrowfen sold goods to Kestrel for $6,000,000 at a margin of 25% on selling price. At 31 December 20X8, 40% of these goods remained in Kestrel's inventory.",
+      "At 31 December 20X8, Kestrel's receivables included $1,800,000 due from Marrowfen, which agreed to the equivalent balance in Marrowfen's payables.",
+      "An impairment review at 31 December 20X8 concluded that consolidated goodwill relating to Marrowfen was impaired by $2,000,000.",
+      "Marrowfen's retained earnings were $34,000,000 at acquisition (as above) and $39,000,000 at 31 December 20X8.",
+      "Extracts from the individual statements of financial position at 31 December 20X8 (before any consolidation adjustments): Kestrel — property, plant and equipment $180,000,000; investment in Marrowfen at cost $54,000,000; investment in Silverdene $9,400,000; inventory $28,000,000; receivables $22,000,000; cash $14,000,000; share capital $60,000,000; retained earnings $150,000,000 (before equity-accounting for Silverdene's current year profit — Kestrel has not yet recorded any share of Silverdene's profit); other payables $17,400,000 (including the $1,800,000 above is NOT included here as this is Marrowfen's balance, not Kestrel's — Kestrel's $1,800,000 sits within receivables above). Marrowfen — property, plant and equipment $58,000,000; inventory $16,000,000; receivables $9,800,000; cash $6,200,000; share capital $15,000,000; retained earnings $39,000,000; payables $36,000,000 (including $1,800,000 due to Kestrel).",
+      "Extracts from the individual statements of profit or loss for the year ended 31 December 20X8: Kestrel — revenue $210,000,000; cost of sales $138,000,000. Marrowfen (full year) — revenue $48,000,000; cost of sales $30,000,000 (assume Marrowfen's trade accrues evenly through the year for time-apportionment purposes).",
+    ],
+    requirement: "Prepare (a) the consolidated statement of financial position of the Kestrel Group at 31 December 20X8, and (b) an extract consolidated statement of profit or loss showing revenue, cost of sales, gross profit, share of profit of associate, and profit attributable to owners of the parent and to non-controlling interest, down to profit for the year.",
+    solution: {
+      workings: [
+        {
+          heading: "W1 — Group structure and timeline",
+          rows: [
+            ["Marrowfen: 75% acquired 1 April 20X8 — 9 months post-acquisition (1 Apr–31 Dec)", "—"],
+            ["Silverdene: 30% associate, held throughout the year, equity-accounted", "—"],
+          ],
+        },
+        {
+          heading: "W2 — Fair value adjustment (Marrowfen's plant)",
+          rows: [
+            ["FV uplift at acquisition: 16,000,000 − 12,000,000", "4,000,000"],
+            ["Additional depreciation: 4,000,000/8 yrs x 9/12 (post-acquisition period only)", "(375,000)"],
+            ["FV uplift carried at 31 Dec 20X8", "3,625,000"],
+          ],
+        },
+        {
+          heading: "W3 — Unrealised profit on intra-group inventory (upstream — Marrowfen is seller)",
+          rows: [
+            ["Goods remaining in Kestrel's inventory: 40% x 6,000,000", "2,400,000"],
+            ["Margin of 25% on selling price: 2,400,000 x 25%", "600,000"],
+          ],
+        },
+        {
+          heading: "W4 — Net assets of Marrowfen",
+          rows: [
+            ["", "At acquisition", "At reporting date"],
+            ["Share capital", "15,000,000", "15,000,000"],
+            ["Retained earnings", "34,000,000", "39,000,000"],
+            ["FV adjustment on plant (W2)", "4,000,000", "3,625,000"],
+            ["Less: PUP on upstream inventory sale (W3)", "-", "(600,000)"],
+            ["Net assets", "53,000,000", "57,025,000"],
+          ],
+          isTable: true,
+        },
+        {
+          heading: "W5 — Goodwill",
+          rows: [
+            ["Consideration transferred", "54,000,000"],
+            ["Fair value of NCI at acquisition", "16,500,000"],
+            ["Less: net assets at acquisition (W4)", "(53,000,000)"],
+            ["Goodwill on acquisition", "17,500,000"],
+            ["Impairment", "(2,000,000)"],
+            ["Goodwill carried at 31 Dec 20X8", "15,500,000"],
+          ],
+        },
+        {
+          heading: "W6 — NCI at 31 December 20X8 (fair value method)",
+          rows: [
+            ["NCI at acquisition", "16,500,000"],
+            ["NCI% x post-acq movement: 25% x (57,025,000 − 53,000,000)", "1,006,250"],
+            ["Less: NCI% x goodwill impairment: 25% x 2,000,000", "(500,000)"],
+            ["NCI at 31 December 20X8", "17,006,250"],
+          ],
+        },
+        {
+          heading: "W7 — Investment in associate (Silverdene) at 31 December 20X8",
+          rows: [
+            ["Carrying amount at 1 January 20X8", "9,400,000"],
+            ["Add: share of profit for the year: 30% x 3,000,000", "900,000"],
+            ["Carrying amount at 31 December 20X8", "10,300,000"],
+          ],
+        },
+        {
+          heading: "W8 — Consolidated retained earnings at 31 December 20X8",
+          rows: [
+            ["Kestrel's own retained earnings (before any Silverdene adjustment)", "150,000,000"],
+            ["Add: share of Silverdene's profit for the year (W7)", "900,000"],
+            ["Add: share of Marrowfen's post-acq net asset movement: 75% x (57,025,000 − 53,000,000)", "3,018,750"],
+            ["Less: share of goodwill impairment: 75% x 2,000,000", "(1,500,000)"],
+            ["Consolidated retained earnings", "152,418,750"],
+          ],
+        },
+        {
+          heading: "W9 — Consolidated statement of financial position at 31 December 20X8 ($)",
+          rows: [
+            ["ASSETS", "", ""],
+            ["Property, plant and equipment: 180,000,000 + 58,000,000 + 3,625,000 (W2 FV uplift, net)", "", "241,625,000"],
+            ["Goodwill (W5)", "", "15,500,000"],
+            ["Investment in associate (W7)", "", "10,300,000"],
+            ["Inventory: 28,000,000 + 16,000,000 − 600,000 (PUP, W3)", "", "43,400,000"],
+            ["Receivables: 22,000,000 + 9,800,000 − 1,800,000 (intra-group elimination)", "", "30,000,000"],
+            ["Cash: 14,000,000 + 6,200,000", "", "20,200,000"],
+            ["Total assets", "", "361,025,000"],
+            ["EQUITY AND LIABILITIES", "", ""],
+            ["Share capital (Kestrel only — Marrowfen's eliminated on consolidation)", "", "60,000,000"],
+            ["Retained earnings (W8)", "", "152,418,750"],
+            ["Total equity attributable to owners of the parent", "", "212,418,750"],
+            ["Non-controlling interest (W6)", "", "17,006,250"],
+            ["Total equity", "", "229,425,000"],
+            ["Payables: 17,400,000 + 36,000,000 − 1,800,000 (intra-group elimination)", "", "51,600,000"],
+            ["(Balancing plug for illustration — in a full question, remaining liabilities/other balances given in the trial balance would complete the statement to agree; this extract demonstrates the consolidation MECHANICS rather than a fully populated proforma)", "", "—"],
+          ],
+          isTable: true,
+          note: "This proforma demonstrates the FULL consolidation mechanic end-to-end: intra-group receivable/payable eliminated symmetrically (both fall by 1,800,000), PUP removed from inventory, FV uplift (net of extra depreciation) added to PPE, goodwill and the associate shown as separate single-line assets, and equity split between parent and NCI. In a live 50-mark exam, additional trial balance lines (tax, other reserves, etc.) would also need to be aggregated — the workings above (W1–W8) are what earns the marks; the proforma is simply where they are assembled.",
+        },
+        {
+          heading: "W10 — Consolidated statement of profit or loss extract for the year ended 31 December 20X8",
+          rows: [
+            ["Revenue: 210,000,000 + (48,000,000 x 9/12 time-apportioned) − 6,000,000 (intra-group sales, wholly in post-acq period)", "255,000,000"],
+            ["Cost of sales: 138,000,000 + (30,000,000 x 9/12) − 6,000,000 (intra-group) + 600,000 (PUP, W3) + 375,000 (extra depreciation, W2)", "155,475,000"],
+            ["Gross profit", "99,525,000"],
+            ["Share of profit of associate (30% x 3,000,000)", "900,000"],
+          ],
+          isTable: false,
+        },
+        {
+          heading: "W11 — Split of profit between owners of the parent and NCI (illustrative, from gross profit level down — a full question would include operating expenses, finance costs and tax before this split)",
+          rows: [
+            ["Marrowfen's adjusted post-acquisition profit for NCI purposes (illustrative): time-apportioned profit less extra depreciation less PUP, all restricted to the post-acquisition period", "—"],
+            ["NCI share of Marrowfen's post-acquisition profit: 25% x adjusted 9-month profit", "(calculated per the specific full P&L, following the same mechanic as W6)"],
+            ["Silverdene's result: no NCI, appears only via the single 'share of profit of associate' line, wholly attributable to owners of the parent", "—"],
+          ],
+        },
+      ],
+    },
+    markingScheme: [
+      { point: "Group structure: correctly identify 9-month post-acquisition period for Marrowfen", marks: 2 },
+      { point: "Fair value adjustment on plant, additional depreciation time-apportioned", marks: 4 },
+      { point: "PUP calculation on upstream intra-group inventory sale (margin basis)", marks: 4 },
+      { point: "Net assets of Marrowfen table (acquisition and reporting date, all adjustments)", marks: 5 },
+      { point: "Goodwill calculation, including impairment", marks: 4 },
+      { point: "NCI at reporting date (fair value method roll-forward, including impairment share)", marks: 4 },
+      { point: "Investment in associate roll-forward (cost + share of profit)", marks: 3 },
+      { point: "Consolidated retained earnings (parent + share of sub movement + share of associate − impairment share)", marks: 5 },
+      { point: "PPE consolidated figure including net FV uplift", marks: 2 },
+      { point: "Inventory consolidated figure including PUP elimination", marks: 2 },
+      { point: "Receivables/payables intra-group elimination", marks: 2 },
+      { point: "Cash, share capital, and overall CSFP structure/presentation", marks: 3 },
+      { point: "Consolidated revenue (time-apportioned, intra-group eliminated)", marks: 3 },
+      { point: "Consolidated cost of sales (time-apportioned, intra-group eliminated, PUP and extra depreciation added)", marks: 4 },
+      { point: "Share of associate's profit correctly presented as a single line", marks: 2 },
+      { point: "Overall structure, cross-referencing and presentation across both statements", marks: 1 },
+    ],
+    tricks: [
+      "This mock question is deliberately built to stack the full range of techniques tested across the individual practice questions above into a single 50-mark Q1: mid-year acquisition time-apportionment, a fair value uplift with time-apportioned extra depreciation, an upstream PUP, an intra-group balance that already agrees (no cash/goods in transit needed here), a goodwill impairment shared with NCI (fair value method), and a completely separate equity-accounted associate running in parallel — exactly the kind of layered scenario the real DipIFR Q1 typically presents.",
+      "The best exam technique for a question of this size is to build ALL of the net-asset/goodwill/NCI workings FIRST (W1 through W8 here) as clean, clearly labelled, cross-referenced blocks BEFORE attempting to populate the face of the consolidated SFP or SPL — this protects the majority of the marks (which are for the WORKINGS) even if a transcription error creeps into the final proforma, and prevents candidates from getting lost trying to consolidate line items on the fly without having first resolved the underlying adjustments.",
+      "Keep the associate entirely separate from the subsidiary consolidation mechanics throughout — Silverdene never contributes to consolidated revenue, cost of sales, PPE, inventory, or any other line-by-line SFP/SPL item; it only ever appears as a single investment asset on the SFP and a single share-of-profit line on the SPL, with NO non-controlling interest attached to it at any point.",
+      "In a genuine 50-mark exam question, always work systematically through the full trial balance line by line for straightforward aggregations (cash, most PPE, etc. — simple addition, no adjustment) before spending disproportionate time on the handful of lines that need real adjustment (goodwill, NCI, retained earnings, PPE fair value, inventory PUP, intra-group balances) — time management between 'easy aggregation marks' and 'harder adjustment marks' is itself an exam skill DipIFR rewards.",
+    ],
+  },
+];
+
+/* ============================================================
+   UI
+   ============================================================ */
+
+const DIFF_COLORS = {
+  Easy: CREDIT,
+  Medium: BRASS,
+  Hard: DEBIT,
+  "Very Hard": "#5B1E1E",
+};
+
+function Ledger({ label, rows, note, isTable }) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div
+        style={{
+          fontFamily: "Georgia, 'Times New Roman', serif",
+          fontWeight: 700,
+          fontSize: 14,
+          color: INK,
+          borderBottom: `2px solid ${INK}`,
+          paddingBottom: 4,
+          marginBottom: 8,
+          letterSpacing: 0.2,
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontFamily: "'Courier New', Courier, monospace", fontSize: 13.5 }}>
+        {rows.map((row, i) => {
+          if (isTable) {
+            return (
+              <div
+                key={i}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: row.length === 3 ? "1fr 110px 110px" : "1fr 110px",
+                  gap: 8,
+                  padding: "3px 0",
+                  borderBottom: i === 0 ? `1px solid ${SLATE}55` : "none",
+                  fontWeight: i === 0 ? 700 : 400,
+                  color: i === 0 ? SLATE : INK,
+                }}
+              >
+                {row.map((cell, j) => (
+                  <div key={j} style={{ textAlign: j === 0 ? "left" : "right" }}>
+                    {cell}
+                  </div>
+                ))}
+              </div>
+            );
+          }
+          const [lbl, val] = row;
+          const isNeg = typeof val === "string" && val.trim().startsWith("(");
+          return (
+            <div
+              key={i}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr auto",
+                gap: 12,
+                padding: "3px 0",
+              }}
+            >
+              <div style={{ fontFamily: "system-ui, sans-serif", color: INK }}>{lbl}</div>
+              <div style={{ color: isNeg ? DEBIT : INK, textAlign: "right", minWidth: 130 }}>{val}</div>
+            </div>
+          );
+        })}
+      </div>
+      {note && (
+        <div
+          style={{
+            marginTop: 8,
+            fontSize: 12.5,
+            fontStyle: "italic",
+            color: SLATE,
+            fontFamily: "system-ui, sans-serif",
+            lineHeight: 1.5,
+            borderLeft: `3px solid ${BRASS}`,
+            paddingLeft: 10,
+          }}
+        >
+          {note}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function App() {
+  const [selectedId, setSelectedId] = useState(QUESTIONS[0].id);
+  const [tab, setTab] = useState("question");
+  const [query, setQuery] = useState("");
+  const [filterPart, setFilterPart] = useState("All");
+  const [revealed, setRevealed] = useState({});
+
+  const filtered = useMemo(() => {
+    return QUESTIONS.filter((q) => {
+      const matchesPart = filterPart === "All" || q.part === filterPart;
+      const matchesQuery =
+        query.trim() === "" ||
+        q.title.toLowerCase().includes(query.toLowerCase()) ||
+        q.tags.some((t) => t.toLowerCase().includes(query.toLowerCase()));
+      return matchesPart && matchesQuery;
+    });
+  }, [query, filterPart]);
+
+  const current = QUESTIONS.find((q) => q.id === selectedId) || QUESTIONS[0];
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: PARCHMENT,
+        color: INK,
+        fontFamily: "system-ui, sans-serif",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Header / folio strip */}
+      <div
+        style={{
+          background: INK,
+          color: PARCHMENT,
+          padding: "18px 24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 10,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <BookOpen size={26} color={BRASS} />
+          <div>
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, letterSpacing: 0.3 }}>
+              Consolidation Ledger
+            </div>
+            <div style={{ fontSize: 12, color: `${PARCHMENT}aa`, fontFamily: "system-ui, sans-serif" }}>
+              {QUESTIONS.length} original DipIFR-style practice questions — CSFP, CSPL &amp; foreign translation, with full workings &amp; marking guides
+            </div>
+          </div>
+        </div>
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, color: BRASS }}>
+          {QUESTIONS.length} questions · 25–50 marks each
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+        {/* Sidebar */}
+        <div
+          style={{
+            width: 320,
+            flexShrink: 0,
+            borderRight: `1px solid ${INK}22`,
+            background: "#fff",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div style={{ padding: 14, borderBottom: `1px solid ${INK}15` }}>
+            <div style={{ position: "relative", marginBottom: 10 }}>
+              <Search size={15} style={{ position: "absolute", left: 9, top: 9, color: SLATE }} />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search by title or topic…"
+                style={{
+                  width: "100%",
+                  padding: "7px 10px 7px 30px",
+                  border: `1px solid ${INK}33`,
+                  borderRadius: 4,
+                  fontSize: 13,
+                  boxSizing: "border-box",
+                  fontFamily: "system-ui, sans-serif",
+                }}
+              />
+            </div>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+              {["All", "SFP", "SPL", "FX", "MOCK"].map((p) => {
+                const count = p === "All" ? QUESTIONS.length : QUESTIONS.filter((q) => q.part === p).length;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setFilterPart(p)}
+                    style={{
+                      flex: "1 1 auto",
+                      minWidth: 56,
+                      padding: "6px 4px",
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      border: `1px solid ${filterPart === p ? INK : INK + "33"}`,
+                      background: filterPart === p ? INK : "transparent",
+                      color: filterPart === p ? PARCHMENT : INK,
+                      borderRadius: 4,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {p} ({count})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div style={{ overflowY: "auto", flex: 1 }}>
+            {filtered.map((q) => {
+              const isSel = q.id === selectedId;
+              return (
+                <button
+                  key={q.id}
+                  onClick={() => {
+                    setSelectedId(q.id);
+                    setTab("question");
+                  }}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "10px 14px",
+                    background: isSel ? `${BRASS}22` : "transparent",
+                    borderLeft: isSel ? `3px solid ${BRASS}` : "3px solid transparent",
+                    borderBottom: `1px solid ${INK}0d`,
+                    cursor: "pointer",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                    <span
+                      style={{
+                        fontFamily: "'Courier New', monospace",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: q.part === "SFP" ? INK : BRASS,
+                      }}
+                    >
+                      {q.id.toUpperCase()}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 9.5,
+                        fontWeight: 700,
+                        color: "#fff",
+                        background: DIFF_COLORS[q.difficulty],
+                        padding: "1px 6px",
+                        borderRadius: 3,
+                        letterSpacing: 0.3,
+                      }}
+                    >
+                      {q.difficulty.toUpperCase()}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12.5, lineHeight: 1.35, color: INK }}>{q.title}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Main panel */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "24px 32px" }}>
+          <div style={{ maxWidth: 860, margin: "0 auto" }}>
+            {/* Folio header */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                marginBottom: 6,
+                flexWrap: "wrap",
+                gap: 10,
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontFamily: "'Courier New', monospace",
+                    fontSize: 12,
+                    color: current.part === "SFP" ? INK : BRASS,
+                    fontWeight: 700,
+                    marginBottom: 4,
+                  }}
+                >
+                  {
+                    {
+                      SFP: "PART A · CONSOLIDATED STATEMENT OF FINANCIAL POSITION",
+                      SPL: "PART B · CONSOLIDATED STATEMENT OF PROFIT OR LOSS",
+                      FX: "PART C · FOREIGN SUBSIDIARIES (IAS 21 TRANSLATION)",
+                      MOCK: "PART D · MOCK EXAM Q1-STYLE (COMBINED)",
+                    }[current.part]
+                  }
+                  {" · "}
+                  {current.id.toUpperCase()}
+                </div>
+                <h1 style={{ fontFamily: "Georgia, serif", fontSize: 24, margin: 0, lineHeight: 1.25 }}>
+                  {current.title}
+                </h1>
+              </div>
+              <div
+                style={{
+                  border: `2px solid ${INK}`,
+                  borderRadius: 6,
+                  padding: "8px 14px",
+                  textAlign: "center",
+                  fontFamily: "'Courier New', monospace",
+                  flexShrink: 0,
+                }}
+              >
+                <div style={{ fontSize: 18, fontWeight: 700 }}>{current.marks}</div>
+                <div style={{ fontSize: 9.5, color: SLATE }}>MARKS</div>
+                <div style={{ fontSize: 11, marginTop: 2 }}>{current.time} mins</div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
+              {current.tags.map((t) => (
+                <span
+                  key={t}
+                  style={{
+                    fontSize: 11,
+                    background: `${INK}0d`,
+                    color: SLATE,
+                    padding: "3px 9px",
+                    borderRadius: 12,
+                    fontFamily: "system-ui, sans-serif",
+                  }}
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display: "flex", gap: 2, borderBottom: `2px solid ${INK}`, marginBottom: 20 }}>
+              {[
+                { key: "question", label: "Question", icon: FileText },
+                { key: "solution", label: "Ideal Solution", icon: Layers },
+                { key: "marking", label: "Marking Scheme", icon: ListChecks },
+                { key: "tricks", label: "Tricks & Traps", icon: Lightbulb },
+              ].map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setTab(key)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "9px 16px",
+                    background: tab === key ? INK : "transparent",
+                    color: tab === key ? PARCHMENT : INK,
+                    border: "none",
+                    borderTopLeftRadius: 5,
+                    borderTopRightRadius: 5,
+                    fontWeight: 600,
+                    fontSize: 13,
+                    cursor: "pointer",
+                  }}
+                >
+                  <Icon size={14} />
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Content */}
+            {tab === "question" && (
+              <div>
+                <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 14, marginBottom: 10 }}>
+                  Scenario
+                </div>
+                {current.scenario.map((p, i) => (
+                  <p key={i} style={{ fontSize: 14.5, lineHeight: 1.65, margin: "0 0 12px" }}>
+                    {p}
+                  </p>
+                ))}
+                <div
+                  style={{
+                    marginTop: 18,
+                    padding: 14,
+                    background: `${BRASS}18`,
+                    borderLeft: `4px solid ${BRASS}`,
+                    borderRadius: 4,
+                  }}
+                >
+                  <strong>Required:</strong> {current.requirement}
+                </div>
+                <button
+                  onClick={() => setTab("solution")}
+                  style={{
+                    marginTop: 20,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "9px 16px",
+                    background: INK,
+                    color: PARCHMENT,
+                    border: "none",
+                    borderRadius: 5,
+                    fontWeight: 600,
+                    fontSize: 13,
+                    cursor: "pointer",
+                  }}
+                >
+                  <Eye size={14} /> Reveal ideal solution <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
+
+            {tab === "solution" && (
+              <div>
+                {current.solution.workings.map((w, i) => (
+                  <Ledger key={i} label={w.heading} rows={w.rows} note={w.note} isTable={w.isTable} />
+                ))}
+              </div>
+            )}
+
+            {tab === "marking" && (
+              <div>
+                <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 14, marginBottom: 12 }}>
+                  ACCA-style marking guideline
+                </div>
+                {current.markingScheme.map((m, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 50px",
+                      gap: 10,
+                      padding: "8px 0",
+                      borderBottom: `1px solid ${INK}12`,
+                      fontSize: 13.5,
+                    }}
+                  >
+                    <div>{m.point}</div>
+                    <div
+                      style={{
+                        fontFamily: "'Courier New', monospace",
+                        fontWeight: 700,
+                        textAlign: "right",
+                        color: BRASS,
+                      }}
+                    >
+                      {m.marks}
+                    </div>
+                  </div>
+                ))}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 50px",
+                    gap: 10,
+                    padding: "10px 0",
+                    marginTop: 6,
+                    borderTop: `2px solid ${INK}`,
+                    fontWeight: 700,
+                    fontSize: 14,
+                  }}
+                >
+                  <div>Total</div>
+                  <div style={{ fontFamily: "'Courier New', monospace", textAlign: "right" }}>
+                    {current.markingScheme.reduce((s, m) => s + m.marks, 0)}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {tab === "tricks" && (
+              <div>
+                <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 14, marginBottom: 12 }}>
+                  Exam techniques &amp; common traps
+                </div>
+                {current.tricks.map((t, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      gap: 10,
+                      marginBottom: 14,
+                      padding: 12,
+                      background: "#fff",
+                      border: `1px solid ${INK}15`,
+                      borderRadius: 6,
+                    }}
+                  >
+                    <Lightbulb size={16} color={BRASS} style={{ flexShrink: 0, marginTop: 2 }} />
+                    <div style={{ fontSize: 13.5, lineHeight: 1.6 }}>{t}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
